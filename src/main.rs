@@ -8,9 +8,8 @@ use winit::window::WindowBuilder;
 
 mod board;
 mod cache;
-mod piece;
 
-use board::{Board, BoardEvent};
+use crate::board::{events::BoardEvent, Board};
 
 const WIN_WIDTH: u32 = 854;
 const WIN_HEIGHT: u32 = 480;

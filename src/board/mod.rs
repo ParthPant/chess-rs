@@ -1,7 +1,10 @@
+pub mod events;
+mod piece;
+
 use crate::cache::Cache;
-use crate::piece::{BoardPiece, BoardPiece::*, Piece::*};
+use events::{BoardEvent, ElementState, MouseButton, MouseState};
+use piece::{BoardPiece, BoardPiece::*, Piece::*};
 use resvg::{tiny_skia, usvg};
-use winit::event::{ElementState, MouseButton};
 
 pub struct Board {
     side_length: u32,
@@ -45,11 +48,11 @@ impl Board {
 
         let check_side = self.get_check_side() as u32;
 
-        let pos = self.mouse_state.pos;
+        let pos = self.mouse_state.get_pos();
         let x = (pos.1 as u32 / check_side) as usize;
         let y = (pos.0 as u32 / check_side) as usize;
 
-        if self.mouse_state.is_left_pressed {
+        if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
                 if let Some(p) = self.board_config[x][y] {
                     // log::debug!("Picking {:?} form check {}, {}", p, x, y);
@@ -59,7 +62,7 @@ impl Board {
             }
         }
 
-        if !self.mouse_state.is_left_pressed {
+        if !self.mouse_state.get_is_left_pressed() {
             if let Some((p, (px, py))) = self.picked_piece {
                 if let None = self.board_config[x][y] {
                     // log::debug!("Place {:?} at check {}, {}", p, x, y);
@@ -71,7 +74,7 @@ impl Board {
             }
         }
 
-        if !self.mouse_state.is_cursor_in {
+        if !self.mouse_state.get_is_cursor_in() {
             if let Some((p, (px, py))) = self.picked_piece {
                 self.board_config[px][py] = Some(p);
             }
@@ -142,8 +145,9 @@ impl Board {
         if let Some((p, _)) = self.picked_piece {
             let tree = self.get_glyph_tree(&p);
 
-            let y = self.mouse_state.pos.1;
-            let x = self.mouse_state.pos.0;
+            let pos = self.mouse_state.get_pos();
+            let y = pos.1;
+            let x = pos.0;
 
             let transform = tiny_skia::Transform::from_translate(
                 x as f32 - glyph_width as f32 / 2.0,
@@ -198,64 +202,10 @@ impl Board {
             BoardEvent::CursorMoved { position } => {
                 self.mouse_state.set_cursor_in();
                 self.mouse_state.update_pos(position);
-            },
+            }
             BoardEvent::CursorLeft => {
                 self.mouse_state.unset_cursor_in();
             }
         }
-    }
-}
-
-pub enum BoardEvent {
-    CursorMoved {
-        position: (usize, usize),
-    },
-    MouseInput {
-        state: ElementState,
-        button: MouseButton,
-    },
-    CursorLeft,
-}
-
-#[derive(Debug, Default)]
-struct MouseState {
-    is_left_pressed: bool,
-    is_right_pressed: bool,
-    is_cursor_in: bool,
-    pos: (usize, usize),
-    delta: (i16, i16),
-}
-
-impl MouseState {
-    fn update_pos(&mut self, p: (usize, usize)) {
-        self.delta = (
-            p.0 as i16 - self.pos.0 as i16,
-            p.1 as i16 - self.pos.1 as i16,
-        );
-        self.pos = p;
-    }
-
-    fn set_left_pressed(&mut self) {
-        self.is_left_pressed = true;
-    }
-
-    fn set_left_released(&mut self) {
-        self.is_left_pressed = false;
-    }
-
-    fn set_right_pressed(&mut self) {
-        self.is_right_pressed = true;
-    }
-
-    fn set_right_released(&mut self) {
-        self.is_right_pressed = false;
-    }
-
-    fn unset_cursor_in(&mut self) {
-        self.is_cursor_in = false;
-    }
-
-    fn set_cursor_in(&mut self) {
-        self.is_cursor_in = true;
     }
 }
