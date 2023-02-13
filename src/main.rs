@@ -7,16 +7,16 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
 mod board;
-mod piece;
 mod cache;
+mod piece;
 
-use board::Board;
+use board::{Board, BoardEvent};
 
 const WIN_WIDTH: u32 = 854;
 const WIN_HEIGHT: u32 = 480;
 
 fn main() -> Result<(), Error> {
-    std::env::set_var("RUST_LOG", "chrs=info");
+    std::env::set_var("RUST_LOG", "chrs=debug");
     pretty_env_logger::init();
 
     let event_loop = EventLoop::new();
@@ -56,6 +56,25 @@ fn main() -> Result<(), Error> {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
                     log::error!("Pixels failed to resize error: {}", err);
                     control_flow.set_exit();
+                }
+            }
+            Event::WindowEvent {
+                event: WindowEvent::MouseInput { state, button, .. },
+                ..
+            } => {
+                let board_event = BoardEvent::MouseInput { state, button };
+                board.handle_event(board_event);
+            }
+            Event::WindowEvent {
+                event: WindowEvent::CursorMoved { position, .. },
+                ..
+            } => {
+                if let Ok(pos) = pixels.window_pos_to_pixel(position.into()) {
+                    let board_event = BoardEvent::CursorMoved { position: pos };
+                    board.handle_event(board_event);
+                } else {
+                    let board_event = BoardEvent::CursorLeft;
+                    board.handle_event(board_event);
                 }
             }
             Event::MainEventsCleared => {

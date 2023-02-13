@@ -1,13 +1,16 @@
+use crate::cache::Cache;
 use crate::piece::{BoardPiece, BoardPiece::*, Piece::*};
 use resvg::{tiny_skia, usvg};
-use crate::cache::Cache;
+use winit::event::{ElementState, MouseButton};
 
 pub struct Board {
     side_length: u32,
     white_color: [u8; 4],
     black_color: [u8; 4],
+    glyph_cache: Cache<usvg::Tree>,
+    picked_piece: Option<(BoardPiece, (usize, usize))>,
+    mouse_state: MouseState,
     board_config: [[Option<BoardPiece>; 8]; 8],
-    glyph_cache: Cache<usvg::Tree>
 }
 
 impl Default for Board {
@@ -18,6 +21,8 @@ impl Default for Board {
             white_color: [0xe3, 0xc1, 0x6f, 0xff],
             black_color: [0xb8, 0x8b, 0x4a, 0xff],
             glyph_cache: Cache::default(),
+            mouse_state: MouseState::default(),
+            picked_piece: None,
             board_config: [[Some(Black(Rook)), Some(Black(Knight)), Some(Black(Bishop)), Some(Black(Queen)), Some(Black(King)), Some(Black(Bishop)), Some(Black(Knight)), Some(Black(Rook))],
                            [Some(Black(Pawn)); 8],
                            [None; 8],
@@ -33,6 +38,45 @@ impl Default for Board {
 impl Board {
     pub fn get_side_length(&self) -> u32 {
         self.side_length
+    }
+
+    pub fn handle_event(&mut self, e: BoardEvent) {
+        self.update_mouse_state(e);
+
+        let check_side = self.get_check_side() as u32;
+
+        let pos = self.mouse_state.pos;
+        let x = (pos.1 as u32 / check_side) as usize;
+        let y = (pos.0 as u32 / check_side) as usize;
+
+        if self.mouse_state.is_left_pressed {
+            if let None = self.picked_piece {
+                if let Some(p) = self.board_config[x][y] {
+                    // log::debug!("Picking {:?} form check {}, {}", p, x, y);
+                    self.board_config[x][y] = None;
+                    self.picked_piece = Some((p, (x, y)));
+                }
+            }
+        }
+
+        if !self.mouse_state.is_left_pressed {
+            if let Some((p, (px, py))) = self.picked_piece {
+                if let None = self.board_config[x][y] {
+                    // log::debug!("Place {:?} at check {}, {}", p, x, y);
+                    self.board_config[x][y] = Some(p);
+                } else {
+                    self.board_config[px][py] = Some(p);
+                }
+                self.picked_piece = None;
+            }
+        }
+
+        if !self.mouse_state.is_cursor_in {
+            if let Some((p, (px, py))) = self.picked_piece {
+                self.board_config[px][py] = Some(p);
+            }
+            self.picked_piece = None;
+        }
     }
 
     pub fn draw(&mut self, frame: &mut [u8]) {
@@ -53,14 +97,17 @@ impl Board {
             self.black_color[3],
         );
 
-        let rect_side = (self.side_length / 8) as f32;
+        let check_side = self.get_check_side();
+        let glyph_width = (check_side * 0.75) as u32;
+
+        // Draw the checkboard and all the arrangement of pieces
         for x in 0..8 {
             for y in 0..8 {
                 let rect = tiny_skia::Rect::from_xywh(
-                    x as f32 * rect_side,
-                    y as f32 * rect_side,
-                    rect_side,
-                    rect_side,
+                    x as f32 * check_side,
+                    y as f32 * check_side,
+                    check_side,
+                    check_side,
                 )
                 .unwrap();
                 let paint = if x % 2 == 0 {
@@ -82,24 +129,38 @@ impl Board {
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
-                        x as f32 * rect_side + rect_side / 8.0,
-                        y as f32 * rect_side + rect_side / 8.0,
+                        x as f32 * check_side + check_side / 8.0,
+                        y as f32 * check_side + check_side / 8.0,
                     );
-                    let fit = usvg::FitTo::Width((rect_side * 0.75) as u32);
-                    resvg::render(
-                        &tree,
-                        fit,
-                        transform,
-                        pixmap.as_mut(),
-                    );
+                    let fit = usvg::FitTo::Width(glyph_width);
+                    resvg::render(&tree, fit, transform, pixmap.as_mut());
                 }
             }
+        }
+
+        // Draw the picked piece if any
+        if let Some((p, _)) = self.picked_piece {
+            let tree = self.get_glyph_tree(&p);
+
+            let y = self.mouse_state.pos.1;
+            let x = self.mouse_state.pos.0;
+
+            let transform = tiny_skia::Transform::from_translate(
+                x as f32 - glyph_width as f32 / 2.0,
+                y as f32 - glyph_width as f32 / 2.0,
+            );
+            let fit = usvg::FitTo::Width(glyph_width);
+            resvg::render(&tree, fit, transform, pixmap.as_mut());
         }
 
         frame.copy_from_slice(pixmap.data());
     }
 
-    fn get_glyph_tree(& mut self, p: &BoardPiece) -> usvg::Tree {
+    fn get_check_side(&self) -> f32 {
+        (self.side_length / 8) as f32
+    }
+
+    fn get_glyph_tree(&mut self, p: &BoardPiece) -> usvg::Tree {
         let glyph_path = Board::get_glyph_path(p);
         match self.glyph_cache.get(&glyph_path) {
             Some(t) => t,
@@ -119,5 +180,82 @@ impl Board {
     fn get_glyph_path(p: &BoardPiece) -> String {
         let s = format!("assets/pieces/{}.svg", p);
         s.to_owned()
+    }
+
+    fn update_mouse_state(&mut self, e: BoardEvent) {
+        match e {
+            BoardEvent::MouseInput { button, state } => match button {
+                MouseButton::Left => match state {
+                    ElementState::Pressed => self.mouse_state.set_left_pressed(),
+                    ElementState::Released => self.mouse_state.set_left_released(),
+                },
+                MouseButton::Right => match state {
+                    ElementState::Pressed => self.mouse_state.set_right_pressed(),
+                    ElementState::Released => self.mouse_state.set_right_released(),
+                },
+                _ => {}
+            },
+            BoardEvent::CursorMoved { position } => {
+                self.mouse_state.set_cursor_in();
+                self.mouse_state.update_pos(position);
+            },
+            BoardEvent::CursorLeft => {
+                self.mouse_state.unset_cursor_in();
+            }
+        }
+    }
+}
+
+pub enum BoardEvent {
+    CursorMoved {
+        position: (usize, usize),
+    },
+    MouseInput {
+        state: ElementState,
+        button: MouseButton,
+    },
+    CursorLeft,
+}
+
+#[derive(Debug, Default)]
+struct MouseState {
+    is_left_pressed: bool,
+    is_right_pressed: bool,
+    is_cursor_in: bool,
+    pos: (usize, usize),
+    delta: (i16, i16),
+}
+
+impl MouseState {
+    fn update_pos(&mut self, p: (usize, usize)) {
+        self.delta = (
+            p.0 as i16 - self.pos.0 as i16,
+            p.1 as i16 - self.pos.1 as i16,
+        );
+        self.pos = p;
+    }
+
+    fn set_left_pressed(&mut self) {
+        self.is_left_pressed = true;
+    }
+
+    fn set_left_released(&mut self) {
+        self.is_left_pressed = false;
+    }
+
+    fn set_right_pressed(&mut self) {
+        self.is_right_pressed = true;
+    }
+
+    fn set_right_released(&mut self) {
+        self.is_right_pressed = false;
+    }
+
+    fn unset_cursor_in(&mut self) {
+        self.is_cursor_in = false;
+    }
+
+    fn set_cursor_in(&mut self) {
+        self.is_cursor_in = true;
     }
 }
