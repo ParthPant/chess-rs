@@ -1,9 +1,10 @@
 pub mod events;
-mod piece;
+pub mod piece;
 
+use crate::boarddata::BoardConfig;
 use crate::cache::Cache;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
-use piece::{BoardPiece, BoardPiece::*, Piece::*};
+use piece::BoardPiece;
 use resvg::{tiny_skia, usvg};
 
 pub struct Board {
@@ -13,7 +14,7 @@ pub struct Board {
     glyph_cache: Cache<usvg::Tree>,
     picked_piece: Option<(BoardPiece, (usize, usize))>,
     mouse_state: MouseState,
-    board_config: [[Option<BoardPiece>; 8]; 8],
+    board_config: BoardConfig,
 }
 
 impl Default for Board {
@@ -26,14 +27,7 @@ impl Default for Board {
             glyph_cache: Cache::default(),
             mouse_state: MouseState::default(),
             picked_piece: None,
-            board_config: [[Some(Black(Rook)), Some(Black(Knight)), Some(Black(Bishop)), Some(Black(Queen)), Some(Black(King)), Some(Black(Bishop)), Some(Black(Knight)), Some(Black(Rook))],
-                           [Some(Black(Pawn)); 8],
-                           [None; 8],
-                           [None; 8],
-                           [None; 8],
-                           [None; 8],
-                           [Some(White(Pawn)); 8],
-                           [Some(White(Rook)), Some(White(Knight)), Some(White(Bishop)), Some(White(Queen)), Some(White(King)), Some(White(Bishop)), Some(White(Knight)), Some(White(Rook))]]
+            board_config: BoardConfig::default(),
         }
     }
 }
@@ -43,41 +37,42 @@ impl Board {
         self.side_length
     }
 
+    pub fn reset(&mut self) {
+        *self = Board::default();
+    }
+
+    pub fn set_from_fen_str(&mut self, s: &str) {
+        self.board_config = BoardConfig::from_fen_str(s);
+    }
+
     pub fn handle_event(&mut self, e: BoardEvent) {
         self.update_mouse_state(e);
 
         let check_side = self.get_check_side() as u32;
 
         let pos = self.mouse_state.get_pos();
-        let x = (pos.1 as u32 / check_side) as usize;
-        let y = (pos.0 as u32 / check_side) as usize;
+        let x = (pos.0 as u32 / check_side) as usize;
+        let y = (pos.1 as u32 / check_side) as usize;
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
-                if let Some(p) = self.board_config[x][y] {
-                    // log::debug!("Picking {:?} form check {}, {}", p, x, y);
-                    self.board_config[x][y] = None;
+                if let Some(p) = self.board_config.get_at_xy(x, y) {
                     self.picked_piece = Some((p, (x, y)));
                 }
             }
         }
 
         if !self.mouse_state.get_is_left_pressed() {
-            if let Some((p, (px, py))) = self.picked_piece {
-                if let None = self.board_config[x][y] {
-                    // log::debug!("Place {:?} at check {}, {}", p, x, y);
-                    self.board_config[x][y] = Some(p);
+            if let Some((_, prev)) = self.picked_piece {
+                if let None = self.board_config.get_at_xy(x, y) {
+                    self.board_config.move_xy_to_xy(prev, (x, y));
                 } else {
-                    self.board_config[px][py] = Some(p);
                 }
                 self.picked_piece = None;
             }
         }
 
         if !self.mouse_state.get_is_cursor_in() {
-            if let Some((p, (px, py))) = self.picked_piece {
-                self.board_config[px][py] = Some(p);
-            }
             self.picked_piece = None;
         }
     }
@@ -104,8 +99,8 @@ impl Board {
         let glyph_width = (check_side * 0.75) as u32;
 
         // Draw the checkboard and all the arrangement of pieces
-        for x in 0..8 {
-            for y in 0..8 {
+        for y in 0..8 {
+            for x in 0..8 {
                 let rect = tiny_skia::Rect::from_xywh(
                     x as f32 * check_side,
                     y as f32 * check_side,
@@ -128,7 +123,14 @@ impl Board {
                 };
 
                 pixmap.fill_rect(rect, paint, tiny_skia::Transform::identity(), None);
-                if let Some(p) = self.board_config[y][x] {
+
+                if let Some((_, (picked_x, picked_y))) = self.picked_piece {
+                    if x == picked_x && y == picked_y {
+                        continue;
+                    }
+                }
+
+                if let Some(p) = self.board_config.get_at_xy(x, y) {
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
@@ -171,10 +173,13 @@ impl Board {
             None => {
                 log::info!("Importing glyph {}", glyph_path);
                 let str = std::fs::read_to_string(&glyph_path).unwrap_or_else(|e| {
-                    log::error!("Error Importing {}: {}", &glyph_path, e);
+                    log::error!("std::fs::read_to_string {}: {}", &glyph_path, e);
                     panic!();
                 });
-                let t = usvg::Tree::from_str(&str, &usvg::Options::default()).unwrap();
+                let t = usvg::Tree::from_str(&str, &usvg::Options::default()).unwrap_or_else(|e| {
+                    log::error!("usvg::Tree::from_str: {}", e);
+                    panic!();
+                });
                 self.glyph_cache.put(&glyph_path, &t);
                 t
             }

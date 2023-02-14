@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Piece {
     King,
     Rook,
@@ -10,7 +10,13 @@ pub enum Piece {
     Pawn,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Color {
+    White,
+    Black,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum BoardPiece {
     White(Piece),
     Black(Piece),

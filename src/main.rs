@@ -7,6 +7,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
 mod board;
+mod boarddata;
 mod cache;
 
 use crate::board::{events::BoardEvent, Board};
