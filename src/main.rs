@@ -30,6 +30,7 @@ fn main() -> Result<(), Error> {
         .unwrap();
 
     let mut board = Board::default();
+    let config = board.get_config();
 
     let (mut pixels, mut framework) = {
         let window_size = window.inner_size();
@@ -44,6 +45,7 @@ fn main() -> Result<(), Error> {
             window_size.height,
             window.scale_factor() as f32,
             &pixels,
+            config.clone(),
         );
 
         (pixels, framework)

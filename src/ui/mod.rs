@@ -5,10 +5,14 @@ mod gui;
 
 use egui::{ClippedPrimitive, Context, TexturesDelta};
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
+use gui::Gui;
 use pixels::{wgpu, PixelsContext};
+use std::cell::RefCell;
+use std::rc::Rc;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
-use gui::Gui;
+
+use crate::boarddata::BoardConfig;
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct GuiFramework {
@@ -32,6 +36,7 @@ impl GuiFramework {
         height: u32,
         scale_factor: f32,
         pixels: &pixels::Pixels,
+        board_config: Rc<RefCell<BoardConfig>>,
     ) -> Self {
         let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
 
@@ -47,7 +52,7 @@ impl GuiFramework {
         let tex_format = pixels.render_texture_format();
         let renderer = Renderer::new(device, tex_format, None, 1);
         let textures = TexturesDelta::default();
-        let gui = Gui::new();
+        let gui = Gui::new(board_config);
 
         Self {
             egui_ctx,

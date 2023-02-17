@@ -6,6 +6,8 @@ use crate::cache::Cache;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use piece::BoardPiece;
 use resvg::{tiny_skia, usvg};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Board {
     side_length: u32,
@@ -14,7 +16,7 @@ pub struct Board {
     glyph_cache: Cache<usvg::Tree>,
     picked_piece: Option<(BoardPiece, (usize, usize))>,
     mouse_state: MouseState,
-    board_config: BoardConfig,
+    board_config: Rc<RefCell<BoardConfig>>,
 }
 
 impl Default for Board {
@@ -27,14 +29,14 @@ impl Default for Board {
             glyph_cache: Cache::default(),
             mouse_state: MouseState::default(),
             picked_piece: None,
-            board_config: BoardConfig::default(),
+            board_config: Rc::new(RefCell::new(BoardConfig::default())),
         }
     }
 }
 
 impl Board {
-    pub fn get_side_length(&self) -> u32 {
-        self.side_length
+    pub fn get_config(&self) -> Rc<RefCell<BoardConfig>> {
+        self.board_config.clone()
     }
 
     pub fn reset(&mut self) {
@@ -42,7 +44,7 @@ impl Board {
     }
 
     pub fn set_from_fen_str(&mut self, s: &str) {
-        self.board_config = BoardConfig::from_fen_str(s);
+        self.board_config = Rc::new(RefCell::new(BoardConfig::from_fen_str(s)));
     }
 
     pub fn handle_event(&mut self, e: BoardEvent) {
@@ -56,7 +58,7 @@ impl Board {
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
-                if let Some(p) = self.board_config.get_at_xy(x, y) {
+                if let Some(p) = self.board_config.borrow().get_at_xy(x, y) {
                     self.picked_piece = Some((p, (x, y)));
                 }
             }
@@ -64,9 +66,9 @@ impl Board {
 
         if !self.mouse_state.get_is_left_pressed() {
             if let Some((_, prev)) = self.picked_piece {
-                if let None = self.board_config.get_at_xy(x, y) {
-                    self.board_config.move_xy_to_xy(prev, (x, y));
-                } else {
+                let mut config = self.board_config.borrow_mut();
+                if let None = config.get_at_xy(x, y) {
+                    config.move_xy_to_xy(prev, (x, y));
                 }
                 self.picked_piece = None;
             }
@@ -78,6 +80,7 @@ impl Board {
     }
 
     pub fn draw(&mut self, frame: &mut [u8]) {
+        let config = self.board_config.borrow().clone();
         let mut pixmap = tiny_skia::Pixmap::new(self.side_length, self.side_length).unwrap();
 
         let mut white_paint = tiny_skia::Paint::default();
@@ -130,7 +133,7 @@ impl Board {
                     }
                 }
 
-                if let Some(p) = self.board_config.get_at_xy(x, y) {
+                if let Some(p) = config.get_at_xy(x, y).to_owned() {
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
@@ -160,6 +163,10 @@ impl Board {
         }
 
         frame.copy_from_slice(pixmap.data());
+    }
+
+    pub fn get_side_length(&self) -> u32 {
+        self.side_length
     }
 
     fn get_check_side(&self) -> f32 {
