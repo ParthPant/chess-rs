@@ -1,5 +1,5 @@
 mod board;
-mod boarddata;
+mod data;
 mod cache;
 mod ui;
 
@@ -24,7 +24,8 @@ fn main() -> Result<(), Error> {
     let builder = WindowBuilder::new();
     let window_size = LogicalSize::new(WIN_WIDTH, WIN_HEIGHT);
     let window = builder
-        .with_title("Chrs")
+        .with_maximized(true)
+        .with_title("chess-rs")
         .with_inner_size(window_size)
         .build(&event_loop)
         .unwrap();

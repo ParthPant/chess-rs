@@ -1,6 +1,7 @@
 mod fen;
+pub mod piece;
 
-use crate::board::piece::{BoardPiece, Color};
+use piece::{BoardPiece, Color};
 use fen::Fen;
 
 pub type BoardMatrix = [[Option<BoardPiece>; 8]; 8];
@@ -26,6 +27,10 @@ impl Default for BoardConfig {
 }
 
 impl BoardConfig {
+    pub fn reset(&mut self) {
+        *self = BoardConfig::default();
+    }
+
     pub fn from_fen_str(s: &str) -> Self {
         Fen::make_config_from_str(s)
     }

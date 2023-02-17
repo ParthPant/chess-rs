@@ -1,26 +1,26 @@
 use super::BoardConfig;
 use super::BoardMatrix;
-use crate::board::piece::{BoardPiece, BoardPiece::*, Color, Piece::*};
+use super::piece::{BoardPiece, BoardPiece::*, Color};
 use phf::phf_map;
 
 static PIECES_CHARS: phf::Map<char, BoardPiece> = phf_map! {
-    'k' => Black(King),
-    'K' => White(King),
+    'k' => BlackKing,
+    'K' => WhiteKing,
 
-    'r' => Black(Rook),
-    'R' => White(Rook),
+    'r' => BlackRook,
+    'R' => WhiteRook,
 
-    'b' => Black(Bishop),
-    'B' => White(Bishop),
+    'b' => BlackBishop,
+    'B' => WhiteBishop,
 
-    'q' => Black(Queen),
-    'Q' => White(Queen),
+    'q' => BlackQueen,
+    'Q' => WhiteQueen,
 
-    'n' => Black(Knight),
-    'N' => White(Knight),
+    'n' => BlackKnight,
+    'N' => WhiteKnight,
 
-    'p' => Black(Pawn),
-    'P' => White(Pawn),
+    'p' => BlackPawn,
+    'P' => WhitePawn,
 };
 
 pub struct Fen {}
@@ -87,23 +87,23 @@ impl Fen {
 
     fn get_c_from_piece(p: BoardPiece) -> char {
         match p {
-            Black(King) => 'k',
-            White(King) => 'K',
+            BlackKing => 'k',
+            WhiteKing => 'K',
 
-            Black(Rook) => 'r',
-            White(Rook) => 'R',
+            BlackRook => 'r',
+            WhiteRook => 'R',
 
-            Black(Bishop) => 'b',
-            White(Bishop) => 'B',
+            BlackBishop => 'b',
+            WhiteBishop => 'B',
 
-            Black(Queen) => 'q',
-            White(Queen) => 'Q',
+            BlackQueen => 'q',
+            WhiteQueen => 'Q',
 
-            Black(Knight) => 'n',
-            White(Knight) => 'N',
+            BlackKnight => 'n',
+            WhiteKnight => 'N',
 
-            Black(Pawn) => 'p',
-            White(Pawn) => 'P',
+            BlackPawn => 'p',
+            WhitePawn => 'P',
         }
     }
 

@@ -1,10 +1,9 @@
 pub mod events;
-pub mod piece;
 
-use crate::boarddata::BoardConfig;
+use crate::data::BoardConfig;
 use crate::cache::Cache;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
-use piece::BoardPiece;
+use crate::data::piece::BoardPiece;
 use resvg::{tiny_skia, usvg};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -37,10 +36,6 @@ impl Default for Board {
 impl Board {
     pub fn get_config(&self) -> Rc<RefCell<BoardConfig>> {
         self.board_config.clone()
-    }
-
-    pub fn reset(&mut self) {
-        *self = Board::default();
     }
 
     pub fn set_from_fen_str(&mut self, s: &str) {
