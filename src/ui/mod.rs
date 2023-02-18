@@ -12,7 +12,7 @@ use std::rc::Rc;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
-use crate::boarddata::BoardConfig;
+use crate::data::BoardConfig;
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct GuiFramework {

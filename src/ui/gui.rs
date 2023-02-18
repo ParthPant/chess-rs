@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::data::BoardConfig;
 use crate::data::piece::Color;
+use crate::data::BoardConfig;
 use egui::Context;
 
 pub(super) struct Gui {
@@ -39,11 +39,7 @@ impl Gui {
                 ui.separator();
 
                 ui.heading("Board Configuration");
-                ui.label(
-                    egui::RichText::new(config.get_fen())
-                        .size(10.0)
-                        .monospace(),
-                );
+                ui.label(egui::RichText::new(config.get_fen()).size(10.0).monospace());
                 egui::CollapsingHeader::new("Edit").show(ui, |ui| {
                     ui.add(egui::TextEdit::multiline(&mut self.fen));
                     if ui.button("Load Fen").clicked() {

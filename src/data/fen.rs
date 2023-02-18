@@ -1,6 +1,6 @@
+use super::piece::{BoardPiece, BoardPiece::*, Color};
 use super::BoardConfig;
 use super::BoardMatrix;
-use super::piece::{BoardPiece, BoardPiece::*, Color};
 use phf::phf_map;
 
 static PIECES_CHARS: phf::Map<char, BoardPiece> = phf_map! {

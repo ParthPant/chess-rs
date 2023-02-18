@@ -1,8 +1,8 @@
 mod fen;
 pub mod piece;
 
-use piece::{BoardPiece, Color};
 use fen::Fen;
+use piece::{BoardPiece, Color};
 
 pub type BoardMatrix = [[Option<BoardPiece>; 8]; 8];
 

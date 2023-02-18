@@ -1,17 +1,19 @@
 pub mod events;
 
-use crate::data::BoardConfig;
 use crate::cache::Cache;
-use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use crate::data::piece::BoardPiece;
+use crate::data::BoardConfig;
+use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use resvg::{tiny_skia, usvg};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Board {
     side_length: u32,
+    ruler_offset: u32,
     white_color: [u8; 4],
     black_color: [u8; 4],
+    ruler_color: [u8; 4],
     glyph_cache: Cache<usvg::Tree>,
     picked_piece: Option<(BoardPiece, (usize, usize))>,
     mouse_state: MouseState,
@@ -23,8 +25,10 @@ impl Default for Board {
     fn default() -> Self {
         Board {
             side_length: 720,
+            ruler_offset: 10,
             white_color: [0xe3, 0xc1, 0x6f, 0xff],
             black_color: [0xb8, 0x8b, 0x4a, 0xff],
+            ruler_color: [0xff, 0xff, 0xff, 0xff],
             glyph_cache: Cache::default(),
             mouse_state: MouseState::default(),
             picked_piece: None,
@@ -76,7 +80,8 @@ impl Board {
 
     pub fn draw(&mut self, frame: &mut [u8]) {
         let config = self.board_config.borrow().clone();
-        let mut pixmap = tiny_skia::Pixmap::new(self.side_length, self.side_length).unwrap();
+        let size = self.get_draw_area_side();
+        let mut pixmap = tiny_skia::Pixmap::new(size, size).unwrap();
 
         let mut white_paint = tiny_skia::Paint::default();
         white_paint.set_color_rgba8(
@@ -85,6 +90,7 @@ impl Board {
             self.white_color[2],
             self.white_color[3],
         );
+
         let mut black_paint = tiny_skia::Paint::default();
         black_paint.set_color_rgba8(
             self.black_color[0],
@@ -93,19 +99,56 @@ impl Board {
             self.black_color[3],
         );
 
+        let mut ruler_paint = tiny_skia::Paint::default();
+        ruler_paint.set_color_rgba8(
+            self.ruler_color[0],
+            self.ruler_color[1],
+            self.ruler_color[2],
+            self.ruler_color[3],
+        );
+
         let check_side = self.get_check_side();
         let glyph_width = (check_side * 0.75) as u32;
+
+        for i in 0..8 {
+            let stroke = tiny_skia::Stroke::default();
+            {
+                // Y-axis
+                let line = {
+                    let mut pb = tiny_skia::PathBuilder::new();
+                    pb.line_to(self.ruler_offset as f32, 0.0);
+                    pb.finish().unwrap()
+                };
+                let transform =
+                    tiny_skia::Transform::from_translate(0.0, (1 + i) as f32 * check_side as f32);
+                pixmap.stroke_path(&line, &ruler_paint, &stroke, transform, None);
+            }
+            {
+                // X-axis
+                let line = {
+                    let mut pb = tiny_skia::PathBuilder::new();
+                    pb.line_to(0.0, self.ruler_offset as f32);
+                    pb.finish().unwrap()
+                };
+                let transform = tiny_skia::Transform::from_translate(
+                    self.ruler_offset as f32 + i as f32 * check_side as f32,
+                    self.side_length as f32,
+                );
+                pixmap.stroke_path(&line, &ruler_paint, &stroke, transform, None);
+            }
+        }
 
         // Draw the checkboard and all the arrangement of pieces
         for y in 0..8 {
             for x in 0..8 {
                 let rect = tiny_skia::Rect::from_xywh(
-                    x as f32 * check_side,
+                    x as f32 * check_side + self.ruler_offset as f32,
                     y as f32 * check_side,
                     check_side,
                     check_side,
                 )
                 .unwrap();
+
                 let paint = if x % 2 == 0 {
                     if y % 2 == 0 {
                         &white_paint
@@ -132,7 +175,7 @@ impl Board {
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
-                        x as f32 * check_side + check_side / 8.0,
+                        x as f32 * check_side + self.ruler_offset as f32 + check_side / 8.0,
                         y as f32 * check_side + check_side / 8.0,
                     );
                     let fit = usvg::FitTo::Width(glyph_width);
@@ -160,8 +203,8 @@ impl Board {
         frame.copy_from_slice(pixmap.data());
     }
 
-    pub fn get_side_length(&self) -> u32 {
-        self.side_length
+    pub fn get_draw_area_side(&self) -> u32 {
+        self.side_length + self.ruler_offset
     }
 
     fn get_check_side(&self) -> f32 {
@@ -208,7 +251,10 @@ impl Board {
             },
             BoardEvent::CursorMoved { position } => {
                 self.mouse_state.set_cursor_in();
-                self.mouse_state.update_pos(position);
+                if position.0 as u32 > self.ruler_offset && (position.1 as u32) < self.side_length {
+                    let position = (position.0 - self.ruler_offset as usize, position.1);
+                    self.mouse_state.update_pos(position);
+                }
             }
             BoardEvent::CursorLeft => {
                 self.mouse_state.unset_cursor_in();

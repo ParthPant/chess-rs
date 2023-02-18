@@ -1,6 +1,6 @@
 mod board;
-mod data;
 mod cache;
+mod data;
 mod ui;
 
 use crate::board::{events::BoardEvent, Board};
@@ -13,8 +13,8 @@ use winit::event::Event;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
-const WIN_WIDTH: u32 = 854;
-const WIN_HEIGHT: u32 = 480;
+const WIN_WIDTH: u32 = 1280;
+const WIN_HEIGHT: u32 = 720;
 
 fn main() -> Result<(), Error> {
     // std::env::set_var("RUST_LOG", "chrs=debug");
@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
     let (mut pixels, mut framework) = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        let board_size = board.get_side_length();
+        let board_size = board.get_draw_area_side();
 
         // TODO: use new_async for web
         let pixels = Pixels::new(board_size, board_size, surface_texture)?;
