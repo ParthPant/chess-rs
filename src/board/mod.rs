@@ -4,6 +4,7 @@ use crate::cache::Cache;
 use crate::data::piece::BoardPiece;
 use crate::data::BoardConfig;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
+use fontdue;
 use resvg::{tiny_skia, usvg};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,7 +15,9 @@ pub struct Board {
     white_color: [u8; 4],
     black_color: [u8; 4],
     ruler_color: [u8; 4],
+    font: fontdue::Font,
     glyph_cache: Cache<usvg::Tree>,
+    raster_cache: Cache<tiny_skia::Pixmap>,
     picked_piece: Option<(BoardPiece, (usize, usize))>,
     mouse_state: MouseState,
     board_config: Rc<RefCell<BoardConfig>>,
@@ -23,13 +26,17 @@ pub struct Board {
 impl Default for Board {
     #[rustfmt::skip]
     fn default() -> Self {
+        let font_src = Self::get_font_src();
+        let font = fontdue::Font::from_bytes(font_src, fontdue::FontSettings::default()).unwrap();
         Board {
             side_length: 720,
-            ruler_offset: 10,
+            ruler_offset: 20,
             white_color: [0xe3, 0xc1, 0x6f, 0xff],
             black_color: [0xb8, 0x8b, 0x4a, 0xff],
             ruler_color: [0xff, 0xff, 0xff, 0xff],
+            font,
             glyph_cache: Cache::default(),
+            raster_cache: Cache::default(),
             mouse_state: MouseState::default(),
             picked_piece: None,
             board_config: Rc::new(RefCell::new(BoardConfig::default())),
@@ -110,45 +117,51 @@ impl Board {
         let check_side = self.get_check_side();
         let glyph_width = (check_side * 0.75) as u32;
 
+        let hline = {
+            let mut pb = tiny_skia::PathBuilder::new();
+            pb.line_to(self.ruler_offset as f32, 0.0);
+            pb.finish().unwrap()
+        };
+        let vline = {
+            let mut pb = tiny_skia::PathBuilder::new();
+            pb.line_to(0.0, self.ruler_offset as f32);
+            pb.finish().unwrap()
+        };
+
         for i in 0..8 {
             let stroke = tiny_skia::Stroke::default();
             {
                 // Y-axis
-                let line = {
-                    let mut pb = tiny_skia::PathBuilder::new();
-                    pb.line_to(self.ruler_offset as f32, 0.0);
-                    pb.finish().unwrap()
-                };
-                let transform =
+                let t1 =
                     tiny_skia::Transform::from_translate(0.0, (1 + i) as f32 * check_side as f32);
-                pixmap.stroke_path(&line, &ruler_paint, &stroke, transform, None);
+                pixmap.stroke_path(&hline, &ruler_paint, &stroke, t1, None);
+
+                let t2 = tiny_skia::Transform::from_translate(
+                    self.ruler_offset as f32 * 0.2,
+                    i as f32 * check_side as f32 + check_side * 0.45,
+                );
+                self.draw_char(('1' as u8 + (7 - i)) as char, 20.0, t2, &mut pixmap);
             }
             {
                 // X-axis
-                let line = {
-                    let mut pb = tiny_skia::PathBuilder::new();
-                    pb.line_to(0.0, self.ruler_offset as f32);
-                    pb.finish().unwrap()
-                };
-                let transform = tiny_skia::Transform::from_translate(
+                let t1 = tiny_skia::Transform::from_translate(
                     self.ruler_offset as f32 + i as f32 * check_side as f32,
                     self.side_length as f32,
                 );
-                pixmap.stroke_path(&line, &ruler_paint, &stroke, transform, None);
+                pixmap.stroke_path(&vline, &ruler_paint, &stroke, t1, None);
+
+                let t2 = tiny_skia::Transform::from_translate(
+                    self.ruler_offset as f32 + i as f32 * check_side as f32 + check_side * 0.45,
+                    self.side_length as f32 + self.ruler_offset as f32 * 0.2,
+                );
+                self.draw_char(('A' as u8 + i) as char, 17.0, t2, &mut pixmap);
             }
         }
 
         // Draw the checkboard and all the arrangement of pieces
+        let rect = tiny_skia::Rect::from_xywh(0.0, 0.0, check_side, check_side).unwrap();
         for y in 0..8 {
             for x in 0..8 {
-                let rect = tiny_skia::Rect::from_xywh(
-                    x as f32 * check_side + self.ruler_offset as f32,
-                    y as f32 * check_side,
-                    check_side,
-                    check_side,
-                )
-                .unwrap();
-
                 let paint = if x % 2 == 0 {
                     if y % 2 == 0 {
                         &white_paint
@@ -163,7 +176,11 @@ impl Board {
                     }
                 };
 
-                pixmap.fill_rect(rect, paint, tiny_skia::Transform::identity(), None);
+                let t = tiny_skia::Transform::from_translate(
+                    x as f32 * check_side + self.ruler_offset as f32,
+                    y as f32 * check_side,
+                );
+                pixmap.fill_rect(rect, paint, t, None);
 
                 if let Some((_, (picked_x, picked_y))) = self.picked_piece {
                     if x == picked_x && y == picked_y {
@@ -252,7 +269,7 @@ impl Board {
             BoardEvent::CursorMoved { position } => {
                 self.mouse_state.set_cursor_in();
                 if position.0 as u32 > self.ruler_offset && (position.1 as u32) < self.side_length {
-                    let position = (position.0 - self.ruler_offset as usize, position.1);
+                    let position = (position.0, position.1);
                     self.mouse_state.update_pos(position);
                 }
             }
@@ -260,5 +277,44 @@ impl Board {
                 self.mouse_state.unset_cursor_in();
             }
         }
+    }
+
+    fn get_font_src() -> Vec<u8> {
+        let filename = "assets/fonts/Roboto-Bold.ttf";
+        std::fs::read(filename).unwrap()
+    }
+
+    fn draw_char(&mut self, c: char, px: f32, t: tiny_skia::Transform, pixmap: &mut tiny_skia::Pixmap) {
+        let pm = {
+            match self.raster_cache.get(&c.to_string()) {
+                Some(x) => x,
+                None => {
+                    log::info!("Rasterizing {}", c);
+                    let (metrics, bitmap) = self.font.rasterize(c, px);
+                    let mut p: Vec<u8> = bitmap
+                        .into_iter()
+                        .map(|x| vec![x, x, x, x])
+                        .flatten()
+                        .collect();
+                    let x = tiny_skia::PixmapMut::from_bytes(
+                        &mut p,
+                        metrics.width as u32,
+                        metrics.height as u32,
+                    )
+                    .unwrap()
+                    .to_owned();
+                    self.raster_cache.put(&c.to_string(), &x);
+                    x
+                }
+            }
+        };
+        pixmap.draw_pixmap(
+            0,
+            0,
+            pm.as_ref(),
+            &tiny_skia::PixmapPaint::default(),
+            t,
+            None,
+        );
     }
 }
