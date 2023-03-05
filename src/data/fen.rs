@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use super::piece::{BoardPiece, BoardPiece::*, Color};
 use super::BoardConfig;
 use super::BoardMatrix;
 use phf::phf_map;
 
-static PIECES_CHARS: phf::Map<char, BoardPiece> = phf_map! {
+pub static PIECES_CHARS: phf::Map<char, BoardPiece> = phf_map! {
     'k' => BlackKing,
     'K' => WhiteKing,
 
@@ -40,7 +42,7 @@ impl Fen {
                         s.push_str(&empty.to_string());
                         empty = 0;
                     }
-                    s.push(Fen::get_c_from_piece(p));
+                    s.push_str(&p.to_string());
                 } else {
                     empty = empty + 1;
                 }
@@ -85,27 +87,27 @@ impl Fen {
         std::str::from_utf8(&[c, y]).unwrap().to_string()
     }
 
-    fn get_c_from_piece(p: BoardPiece) -> char {
-        match p {
-            BlackKing => 'k',
-            WhiteKing => 'K',
-
-            BlackRook => 'r',
-            WhiteRook => 'R',
-
-            BlackBishop => 'b',
-            WhiteBishop => 'B',
-
-            BlackQueen => 'q',
-            WhiteQueen => 'Q',
-
-            BlackKnight => 'n',
-            WhiteKnight => 'N',
-
-            BlackPawn => 'p',
-            WhitePawn => 'P',
-        }
-    }
+    // fn get_c_from_piece(p: BoardPiece) -> char {
+    //     match p {
+    //         BlackKing => 'k',
+    //         WhiteKing => 'K',
+    //
+    //         BlackRook => 'r',
+    //         WhiteRook => 'R',
+    //
+    //         BlackBishop => 'b',
+    //         WhiteBishop => 'B',
+    //
+    //         BlackQueen => 'q',
+    //         WhiteQueen => 'Q',
+    //
+    //         BlackKnight => 'n',
+    //         WhiteKnight => 'N',
+    //
+    //         BlackPawn => 'p',
+    //         WhitePawn => 'P',
+    //     }
+    // }
 
     fn get_piece_from_c(c: char) -> BoardPiece {
         if let Some(p) = PIECES_CHARS.get(&c).cloned() {
@@ -246,6 +248,7 @@ impl Fen {
             can_black_castle_queenside,
             halfmove_clock,
             fullmove_number,
+            bitboards: HashMap::default(),
         }
     }
 }

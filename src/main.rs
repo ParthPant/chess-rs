@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod board;
 mod cache;
 mod data;

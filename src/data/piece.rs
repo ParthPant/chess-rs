@@ -46,3 +46,18 @@ impl fmt::Display for BoardPiece {
         write!(f, "{}", name)
     }
 }
+
+impl BoardPiece {
+    pub fn get_color(&self) -> Color {
+        use BoardPiece::*;
+        match self {
+            WhiteKing | WhiteRook | WhiteBishop | WhiteQueen | WhiteKnight | WhitePawn => {
+                Color::White
+            }
+
+            BlackKing | BlackRook | BlackBishop | BlackQueen | BlackKnight | BlackPawn => {
+                Color::Black
+            }
+        }
+    }
+}

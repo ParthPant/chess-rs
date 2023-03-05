@@ -284,7 +284,13 @@ impl Board {
         std::fs::read(filename).unwrap()
     }
 
-    fn draw_char(&mut self, c: char, px: f32, t: tiny_skia::Transform, pixmap: &mut tiny_skia::Pixmap) {
+    fn draw_char(
+        &mut self,
+        c: char,
+        px: f32,
+        t: tiny_skia::Transform,
+        pixmap: &mut tiny_skia::Pixmap,
+    ) {
         let pm = {
             match self.raster_cache.get(&c.to_string()) {
                 Some(x) => x,
