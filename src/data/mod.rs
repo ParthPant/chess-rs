@@ -1,4 +1,4 @@
-mod bitboard;
+pub mod bitboard;
 mod fen;
 pub mod piece;
 
@@ -9,6 +9,7 @@ use fen::{Fen, PIECES_CHARS};
 use piece::{BoardPiece, Color};
 
 pub type BoardMatrix = [[Option<BoardPiece>; 8]; 8];
+pub type BoardMap = HashMap<BoardPiece, BitBoard>;
 
 #[derive(Debug, Clone)]
 pub struct BoardConfig {
@@ -22,7 +23,7 @@ pub struct BoardConfig {
     can_black_castle_kingside: bool,
     halfmove_clock: u32,
     fullmove_number: u32,
-    bitboards: HashMap<BoardPiece, BitBoard>,
+    bitboards: BoardMap,
 }
 
 impl Default for BoardConfig {
@@ -115,10 +116,10 @@ impl BoardConfig {
         self.fullmove_number
     }
 
-    pub fn get_bit_board(&self, c: char) -> Option<u64> {
+    pub fn get_bit_board(&self, c: char) -> Option<BitBoard> {
         if let Some(p) = PIECES_CHARS.get(&c) {
             if let Some(b) = self.bitboards.get(p) {
-                return Some(b.data());
+                return Some(*b);
             }
         }
         None
@@ -136,6 +137,7 @@ impl BoardConfig {
             for x in 0..8 {
                 if let Some(p) = self.board_mat[y][x] {
                     let b = self.bitboards.entry(p).or_default();
+                    log::debug!("add {} to bit {}", p, 8 * y + x);
                     b.add(x, y);
                 }
             }

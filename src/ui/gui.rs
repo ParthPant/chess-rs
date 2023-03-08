@@ -63,13 +63,8 @@ impl Gui {
                 if self.bit_board.len() == 1 {
                     let c = self.bit_board.chars().next().unwrap();
                     if let Some(b) = config.get_bit_board(c) {
-                        let b = (0..8)
-                            .map(|x| format! {"{0:08b}", ((b & (0xff << x*8)) >> x*8) as u8})
-                            .map(|s| s.chars().rev().collect::<String>())
-                            .collect::<Vec<String>>()
-                            .join("\n");
                         ui.label(
-                            egui::RichText::new(b)
+                            egui::RichText::new(b.to_string())
                                 .background_color(Color32::BLACK)
                                 .size(10.0)
                                 .monospace(),

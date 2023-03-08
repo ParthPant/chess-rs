@@ -3,13 +3,14 @@
 mod board;
 mod cache;
 mod data;
+mod generator;
 mod ui;
 
-use crate::board::{events::BoardEvent, Board};
-use crate::ui::GuiFramework;
+use board::{events::BoardEvent, Board};
 use log;
 use pixels::{Error, Pixels, SurfaceTexture};
 use pretty_env_logger;
+use ui::GuiFramework;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::event_loop::{ControlFlow, EventLoop};

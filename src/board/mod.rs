@@ -60,7 +60,7 @@ impl Board {
 
         let pos = self.mouse_state.get_pos();
         let x = (pos.0 as u32 / check_side) as usize;
-        let y = (pos.1 as u32 / check_side) as usize;
+        let y = 7 - (pos.1 as u32 / check_side) as usize;
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
@@ -178,7 +178,7 @@ impl Board {
 
                 let t = tiny_skia::Transform::from_translate(
                     x as f32 * check_side + self.ruler_offset as f32,
-                    y as f32 * check_side,
+                    (7 - y) as f32 * check_side,
                 );
                 pixmap.fill_rect(rect, paint, t, None);
 
@@ -193,7 +193,7 @@ impl Board {
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
                         x as f32 * check_side + self.ruler_offset as f32 + check_side / 8.0,
-                        y as f32 * check_side + check_side / 8.0,
+                        (7 - y) as f32 * check_side + check_side / 8.0,
                     );
                     let fit = usvg::FitTo::Width(glyph_width);
                     resvg::render(&tree, fit, transform, pixmap.as_mut());

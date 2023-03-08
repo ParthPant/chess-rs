@@ -34,7 +34,7 @@ impl Fen {
 
     pub fn make_fen_from_config(c: &BoardConfig) -> String {
         let mut s = String::new();
-        for y in 0..8 {
+        for y in (0..8).rev() {
             let mut empty = 0;
             for x in 0..8 {
                 if let Some(p) = c.get_at_xy(x, y) {
@@ -83,7 +83,7 @@ impl Fen {
 
     fn get_code_from_mat_coords(x: usize, y: usize) -> String {
         let c = 'a'.to_ascii_lowercase() as u8 + x as u8;
-        let y = (8 - y) as u8;
+        let y = (y + 1) as u8;
         std::str::from_utf8(&[c, y]).unwrap().to_string()
     }
 
@@ -132,7 +132,7 @@ impl Fen {
         };
 
         let n: String = it.collect();
-        let y = 8 as usize - n.parse::<usize>().unwrap();
+        let y = n.parse::<usize>().unwrap() - 1;
 
         log::debug!("decode {} to {:?}", s, (x, y));
 
@@ -162,8 +162,8 @@ impl Fen {
                             if c.is_digit(10) {
                                 x = x + c.to_digit(10).unwrap();
                             } else {
-                                log::debug!("Place {c} at {:?}", (i, x));
-                                board_mat[i][x as usize] = Some(Fen::get_piece_from_c(c));
+                                log::debug!("Place {c} at {:?}", (7 - i, x));
+                                board_mat[7 - i][x as usize] = Some(Fen::get_piece_from_c(c));
                                 x = x + 1;
                             }
                         }
