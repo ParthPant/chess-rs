@@ -3,27 +3,31 @@ use std::collections::HashMap;
 use super::piece::{BoardPiece, BoardPiece::*, Color};
 use super::BoardConfig;
 use super::BoardMatrix;
-use phf::phf_map;
+use lazy_static::lazy_static;
 
-pub static PIECES_CHARS: phf::Map<char, BoardPiece> = phf_map! {
-    'k' => BlackKing,
-    'K' => WhiteKing,
+lazy_static! {
+    pub static ref PIECES_CHARS: HashMap<char, BoardPiece> = {
+        let mut m = HashMap::new();
+        m.insert('k', BlackKing);
+        m.insert('K', WhiteKing);
 
-    'r' => BlackRook,
-    'R' => WhiteRook,
+        m.insert('r', BlackRook);
+        m.insert('R', WhiteRook);
 
-    'b' => BlackBishop,
-    'B' => WhiteBishop,
+        m.insert('b', BlackBishop);
+        m.insert('B', WhiteBishop);
 
-    'q' => BlackQueen,
-    'Q' => WhiteQueen,
+        m.insert('q', BlackQueen);
+        m.insert('Q', WhiteQueen);
 
-    'n' => BlackKnight,
-    'N' => WhiteKnight,
+        m.insert('n', BlackKnight);
+        m.insert('N', WhiteKnight);
 
-    'p' => BlackPawn,
-    'P' => WhitePawn,
-};
+        m.insert('p', BlackPawn);
+        m.insert('P', WhitePawn);
+        m
+    };
+}
 
 pub struct Fen {}
 

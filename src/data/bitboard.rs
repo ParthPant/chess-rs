@@ -52,6 +52,7 @@ impl Display for BitBoard {
             .collect::<Vec<String>>()
             .join("\n");
         b.push_str("\n  abcdefgh");
+        b = b.replace("0", ".");
         write!(f, "{}", b)
     }
 }

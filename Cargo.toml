@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
+lazy_static = "1.4.0"
 winit = "0.27.5"
 pixels = "0.11.0"
 resvg = "0.29.0"
-phf = { version = "0.11", features = ["macros"] }
 egui = "0.20.0"
 egui-winit = "0.20.1"
 egui-wgpu = "0.20.0"
