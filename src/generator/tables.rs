@@ -1,4 +1,5 @@
-use crate::data::piece::Color;
+use crate::data::piece::{BoardPiece, Color};
+use rand;
 
 pub const NOT_A_FILE: u64 = {
     let mut x: u64 = 0;
@@ -123,6 +124,250 @@ const fn generate_king_attack(sq: usize) -> u64 {
 
     if sq % 8 == 7 {
         b &= NOT_A_FILE;
+    }
+
+    b
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MagicEntry {
+    pub relevant_occupancy: u64,
+    pub magic: u64,
+    pub index_bits: u8,
+}
+
+pub struct TableFillError;
+
+pub fn magic_index(entry: &MagicEntry, blockers: u64) -> usize {
+    let relevant_blockers = blockers & entry.relevant_occupancy;
+    let hash = relevant_blockers.wrapping_mul(entry.magic);
+    let index = (hash >> (64 - entry.index_bits)) as usize;
+    index
+}
+
+fn try_make_table(
+    sq: usize,
+    slider: BoardPiece,
+    magic: &MagicEntry,
+) -> Result<Vec<u64>, TableFillError> {
+    let mut table = vec![0 as u64; 1 << magic.index_bits];
+
+    let mut subset: u64 = 0;
+    loop {
+        let table_entry = &mut table[magic_index(magic, subset)];
+        let moves = match slider {
+            BoardPiece::WhiteRook | BoardPiece::BlackRook => generate_rook_attack(sq, subset),
+            BoardPiece::WhiteBishop | BoardPiece::BlackBishop => generate_bishop_attack(sq, subset),
+            _ => panic!("{:?} is not a sliding Piece", slider),
+        };
+
+        if *table_entry == 0 {
+            *table_entry = moves;
+        } else if *table_entry != moves {
+            return Err(TableFillError);
+        }
+
+        subset = subset.wrapping_sub(magic.relevant_occupancy) & magic.relevant_occupancy;
+        if subset == 0 {
+            break;
+        }
+    }
+
+    Ok(table)
+}
+
+pub fn find_magic(sq: usize, slider: BoardPiece) -> (MagicEntry, Vec<u64>) {
+    let relevant_occupancy = match slider {
+        BoardPiece::WhiteRook | BoardPiece::BlackRook => rook_relevant_occupancy(sq),
+        BoardPiece::WhiteBishop | BoardPiece::BlackBishop => bishop_relevant_occupancy(sq),
+        _ => panic!("{:?} is not a sliding Piece", slider),
+    };
+
+    loop {
+        let magic = random_u64() & random_u64() & random_u64();
+        let index_bits = relevant_occupancy.count_ones() as u8;
+        let magic_entry = MagicEntry {
+            relevant_occupancy,
+            magic,
+            index_bits,
+        };
+        if let Ok(table) = try_make_table(sq, slider, &magic_entry) {
+            return (magic_entry, table);
+        }
+    }
+}
+
+fn random_u64() -> u64 {
+    rand::random::<u64>()
+}
+
+const fn bishop_relevant_occupancy(sq: usize) -> u64 {
+    let sq = sq as i8;
+    let mut b = 0;
+
+    let mut r = sq / 8 + 1;
+    let mut f = sq % 8 + 1;
+    while r <= 6 && f <= 6 {
+        b |= 1 << (r * 8 + f);
+        r += 1;
+        f += 1;
+    }
+
+    let mut r = sq / 8 + 1;
+    let mut f = sq % 8 - 1;
+    while r <= 6 && f > 0 {
+        b |= 1 << (r * 8 + f);
+        r += 1;
+        f -= 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let mut f = sq % 8 + 1;
+    while r > 0 && f <= 6 {
+        b |= 1 << (r * 8 + f);
+        r -= 1;
+        f += 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let mut f = sq % 8 - 1;
+    while r > 0 && f > 0 {
+        b |= 1 << (r * 8 + f);
+        r -= 1;
+        f -= 1;
+    }
+
+    b
+}
+
+const fn rook_relevant_occupancy(sq: usize) -> u64 {
+    let sq = sq as i8;
+    let mut b = 0;
+
+    let mut r = sq / 8 + 1;
+    let f = sq % 8;
+    while r <= 6 {
+        b |= 1 << (r * 8 + f);
+        r += 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let f = sq % 8;
+    while r > 0 {
+        b |= 1 << (r * 8 + f);
+        r -= 1;
+    }
+
+    let r = sq / 8;
+    let mut f = sq % 8 + 1;
+    while f <= 6 {
+        b |= 1 << (r * 8 + f);
+        f += 1;
+    }
+
+    let r = sq / 8;
+    let mut f = sq % 8 - 1;
+    while f > 0 {
+        b |= 1 << (r * 8 + f);
+        f -= 1;
+    }
+
+    b
+}
+
+const fn generate_bishop_attack(sq: usize, block: u64) -> u64 {
+    let sq = sq as i8;
+    let mut b = 0;
+
+    let mut r = sq / 8 + 1;
+    let mut f = sq % 8 + 1;
+    while r <= 7 && f <= 7 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r += 1;
+        f += 1;
+    }
+
+    let mut r = sq / 8 + 1;
+    let mut f = sq % 8 - 1;
+    while r <= 7 && f >= 0 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r += 1;
+        f -= 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let mut f = sq % 8 + 1;
+    while r >= 0 && f <= 7 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r -= 1;
+        f += 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let mut f = sq % 8 - 1;
+    while r >= 0 && f >= 0 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r -= 1;
+        f -= 1;
+    }
+
+    b
+}
+
+const fn generate_rook_attack(sq: usize, block: u64) -> u64 {
+    let sq = sq as i8;
+    let mut b = 0;
+
+    let mut r = sq / 8 + 1;
+    let f = sq % 8;
+    while r <= 7 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r += 1;
+    }
+
+    let mut r = sq / 8 - 1;
+    let f = sq % 8;
+    while r >= 0 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        r -= 1;
+    }
+
+    let r = sq / 8;
+    let mut f = sq % 8 + 1;
+    while f <= 7 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        f += 1;
+    }
+
+    let r = sq / 8;
+    let mut f = sq % 8 - 1;
+    while f >= 0 {
+        b |= 1 << (r * 8 + f);
+        if block & (1 << (r * 8 + f)) > 0 {
+            break;
+        }
+        f -= 1;
     }
 
     b

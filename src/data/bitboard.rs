@@ -13,6 +13,14 @@ impl BitBoard {
         self.0 &= !((1 as u64) << Self::bit_from_xy(x, y) as u64);
     }
 
+    pub fn set(&mut self, sq: usize) {
+        self.0 |= (1 as u64) << sq;
+    }
+
+    pub fn unset(&mut self, sq: usize) {
+        self.0 &= !((1 as u64) << sq);
+    }
+
     pub fn move_xy_to_xy(&mut self, prev: (usize, usize), new: (usize, usize)) {
         self.remove(prev.0, prev.1);
         self.add(new.0, new.1);
@@ -28,6 +36,12 @@ impl BitBoard {
 
     fn xy_from_bit(i: usize) -> (usize, usize) {
         (i % 8, i / 8)
+    }
+}
+
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.0
     }
 }
 
