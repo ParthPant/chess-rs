@@ -1,4 +1,7 @@
-use crate::data::piece::{BoardPiece, Color};
+use crate::data::{
+    bitboard::BitBoard,
+    piece::{BoardPiece, Color},
+};
 use rand;
 
 pub const NOT_A_FILE: u64 = {
@@ -138,7 +141,8 @@ pub struct MagicEntry {
 
 pub struct TableFillError;
 
-pub fn magic_index(entry: &MagicEntry, blockers: u64) -> usize {
+pub fn magic_index(entry: &MagicEntry, blockers: BitBoard) -> usize {
+    let blockers: u64 = blockers.into();
     let relevant_blockers = blockers & entry.relevant_occupancy;
     let hash = relevant_blockers.wrapping_mul(entry.magic);
     let index = (hash >> (64 - entry.index_bits)) as usize;
@@ -149,12 +153,12 @@ fn try_make_table(
     sq: usize,
     slider: BoardPiece,
     magic: &MagicEntry,
-) -> Result<Vec<u64>, TableFillError> {
-    let mut table = vec![0 as u64; 1 << magic.index_bits];
+) -> Result<Vec<BitBoard>, TableFillError> {
+    let mut table = vec![BitBoard::default(); 1 << magic.index_bits];
 
     let mut subset: u64 = 0;
     loop {
-        let table_entry = &mut table[magic_index(magic, subset)];
+        let table_entry = &mut table[magic_index(magic, subset.into())];
         let moves = match slider {
             BoardPiece::WhiteRook | BoardPiece::BlackRook => generate_rook_attack(sq, subset),
             BoardPiece::WhiteBishop | BoardPiece::BlackBishop => generate_bishop_attack(sq, subset),
@@ -162,7 +166,7 @@ fn try_make_table(
         };
 
         if *table_entry == 0 {
-            *table_entry = moves;
+            *table_entry = moves.into();
         } else if *table_entry != moves {
             return Err(TableFillError);
         }
@@ -176,7 +180,7 @@ fn try_make_table(
     Ok(table)
 }
 
-pub fn find_magic(sq: usize, slider: BoardPiece) -> (MagicEntry, Vec<u64>) {
+pub fn find_magic(sq: usize, slider: BoardPiece) -> (MagicEntry, Vec<BitBoard>) {
     let relevant_occupancy = match slider {
         BoardPiece::WhiteRook | BoardPiece::BlackRook => rook_relevant_occupancy(sq),
         BoardPiece::WhiteBishop | BoardPiece::BlackBishop => bishop_relevant_occupancy(sq),

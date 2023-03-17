@@ -23,7 +23,7 @@ pub struct BoardConfig {
     can_black_castle_kingside: bool,
     halfmove_clock: u32,
     fullmove_number: u32,
-    bitboards: BoardMap,
+    pub bitboards: BoardMap,
 }
 
 impl Default for BoardConfig {
@@ -64,11 +64,14 @@ impl BoardConfig {
             if pcolor != self.active_color {
                 return;
             }
-            // prevent from moving to a square with piece of same color
             if let Some(to) = self.board_mat[new.1][new.0] {
+                // prevent from moving to a square with piece of same color
                 if to.get_color() == pcolor {
                     return;
                 }
+                // capture piece
+                // TODO: Handle Captures
+                self.remove_from_bitboard(to, new);
             }
             self.board_mat[new.1][new.0] = self.board_mat[prev.1][prev.0];
             self.board_mat[prev.1][prev.0] = None;
@@ -125,6 +128,38 @@ impl BoardConfig {
         None
     }
 
+    pub fn all_occupancy(&self) -> BitBoard {
+        let mut ret = BitBoard::from(0);
+        for (_p, bb) in self.bitboards.iter() {
+            ret |= *bb;
+        }
+        ret
+    }
+
+    pub fn white_occupancy(&self) -> BitBoard {
+        let mut ret = BitBoard::from(0);
+        use BoardPiece::*;
+        ret |= self.bitboards[&WhiteRook]
+            | self.bitboards[&WhiteBishop]
+            | self.bitboards[&WhiteKnight]
+            | self.bitboards[&WhiteKing]
+            | self.bitboards[&WhiteQueen]
+            | self.bitboards[&WhitePawn];
+        ret
+    }
+
+    pub fn black_occupancy(&self) -> BitBoard {
+        let mut ret = BitBoard::from(0);
+        use BoardPiece::*;
+        ret |= self.bitboards[&BlackRook]
+            | self.bitboards[&BlackBishop]
+            | self.bitboards[&BlackKnight]
+            | self.bitboards[&BlackKing]
+            | self.bitboards[&BlackQueen]
+            | self.bitboards[&BlackPawn];
+        ret
+    }
+
     fn toggle_active_color(&mut self) {
         self.active_color = match self.active_color {
             Color::White => Color::Black,
@@ -147,6 +182,12 @@ impl BoardConfig {
     fn update_bitboard(&mut self, p: BoardPiece, prev: (usize, usize), new: (usize, usize)) {
         self.bitboards.entry(p).and_modify(|b| {
             b.move_xy_to_xy(prev, new);
+        });
+    }
+
+    fn remove_from_bitboard(&mut self, p: BoardPiece, pos: (usize, usize)) {
+        self.bitboards.entry(p).and_modify(|b| {
+            b.unset(pos.1 * 8 + pos.0);
         });
     }
 }

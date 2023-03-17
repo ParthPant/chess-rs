@@ -1,13 +1,10 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::piece::BoardPiece;
-use crate::data::BoardConfig;
+use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct Board {
     side_length: u32,
@@ -15,12 +12,14 @@ pub struct Board {
     white_color: [u8; 4],
     black_color: [u8; 4],
     ruler_color: [u8; 4],
+    highlight_color: [u8; 4],
     font: fontdue::Font,
     glyph_cache: Cache<usvg::Tree>,
     raster_cache: Cache<tiny_skia::Pixmap>,
     picked_piece: Option<(BoardPiece, (usize, usize))>,
     mouse_state: MouseState,
-    board_config: Rc<RefCell<BoardConfig>>,
+    // TODO: Make a better representation for Moves
+    user_move: Option<((usize, usize), (usize, usize))>,
 }
 
 impl Default for Board {
@@ -34,26 +33,29 @@ impl Default for Board {
             white_color: [0xe3, 0xc1, 0x6f, 0xff],
             black_color: [0xb8, 0x8b, 0x4a, 0xff],
             ruler_color: [0xff, 0xff, 0xff, 0xff],
+            highlight_color: [0x3f, 0x7a, 0xd9, 0x40],
             font,
             glyph_cache: Cache::default(),
             raster_cache: Cache::default(),
             mouse_state: MouseState::default(),
             picked_piece: None,
-            board_config: Rc::new(RefCell::new(BoardConfig::default())),
+            user_move: None,
         }
     }
 }
 
 impl Board {
-    pub fn get_config(&self) -> Rc<RefCell<BoardConfig>> {
-        self.board_config.clone()
+    pub fn get_user_move(&mut self) -> Option<((usize, usize), (usize, usize))> {
+        let umove = self.user_move;
+        self.user_move = None;
+        umove
     }
 
-    pub fn set_from_fen_str(&mut self, s: &str) {
-        self.board_config = Rc::new(RefCell::new(BoardConfig::from_fen_str(s)));
+    pub fn get_picked_piece(&self) -> Option<(BoardPiece, (usize, usize))> {
+        self.picked_piece
     }
 
-    pub fn handle_event(&mut self, e: BoardEvent) {
+    pub fn handle_event(&mut self, e: BoardEvent, config: &BoardConfig) {
         self.update_mouse_state(e);
 
         let check_side = self.get_check_side() as u32;
@@ -64,7 +66,7 @@ impl Board {
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
-                if let Some(p) = self.board_config.borrow().get_at_xy(x, y) {
+                if let Some(p) = config.get_at_xy(x, y) {
                     self.picked_piece = Some((p, (x, y)));
                 }
             }
@@ -72,10 +74,7 @@ impl Board {
 
         if !self.mouse_state.get_is_left_pressed() {
             if let Some((_, prev)) = self.picked_piece {
-                let mut config = self.board_config.borrow_mut();
-                if let None = config.get_at_xy(x, y) {
-                    config.move_xy_to_xy(prev, (x, y));
-                }
+                self.user_move = Some((prev, (x, y)));
                 self.picked_piece = None;
             }
         }
@@ -85,8 +84,7 @@ impl Board {
         }
     }
 
-    pub fn draw(&mut self, frame: &mut [u8]) {
-        let config = self.board_config.borrow().clone();
+    pub fn draw(&mut self, frame: &mut [u8], config: &BoardConfig, moves: &BitBoard) {
         let size = self.get_draw_area_side();
         let mut pixmap = tiny_skia::Pixmap::new(size, size).unwrap();
 
@@ -112,6 +110,14 @@ impl Board {
             self.ruler_color[1],
             self.ruler_color[2],
             self.ruler_color[3],
+        );
+
+        let mut highlight_paint = tiny_skia::Paint::default();
+        highlight_paint.set_color_rgba8(
+            self.highlight_color[0],
+            self.highlight_color[1],
+            self.highlight_color[2],
+            self.highlight_color[3],
         );
 
         let check_side = self.get_check_side();
@@ -181,6 +187,9 @@ impl Board {
                     (7 - y) as f32 * check_side,
                 );
                 pixmap.fill_rect(rect, paint, t, None);
+                if moves.is_set(y * 8 + x) {
+                    pixmap.fill_rect(rect, &highlight_paint, t, None);
+                }
 
                 if let Some((_, (picked_x, picked_y))) = self.picked_piece {
                     if x == picked_x && y == picked_y {

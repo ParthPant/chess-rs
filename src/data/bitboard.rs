@@ -1,5 +1,6 @@
+use std::cmp::PartialEq;
 use std::fmt::Display;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
 
 #[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Eq, PartialEq)]
 pub struct BitBoard(u64);
@@ -21,6 +22,10 @@ impl BitBoard {
         self.0 &= !((1 as u64) << sq);
     }
 
+    pub fn is_set(&self, sq: usize) -> bool {
+        self.0 & ((1 as u64) << sq) > 0
+    }
+
     pub fn move_xy_to_xy(&mut self, prev: (usize, usize), new: (usize, usize)) {
         self.remove(prev.0, prev.1);
         self.add(new.0, new.1);
@@ -36,6 +41,12 @@ impl BitBoard {
 
     fn xy_from_bit(i: usize) -> (usize, usize) {
         (i % 8, i / 8)
+    }
+}
+
+impl PartialEq<u64> for BitBoard {
+    fn eq(&self, other: &u64) -> bool {
+        self.0 == *other
     }
 }
 
@@ -96,5 +107,31 @@ impl BitAnd for BitBoard {
 impl BitAndAssign for BitBoard {
     fn bitand_assign(&mut self, rhs: Self) {
         *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl Shr<BitBoard> for BitBoard {
+    type Output = Self;
+
+    fn shr(self, Self(rhs): Self) -> Self::Output {
+        let Self(lhs) = self;
+        Self(lhs >> rhs)
+    }
+}
+
+impl Shl<BitBoard> for BitBoard {
+    type Output = Self;
+
+    fn shl(self, Self(rhs): Self) -> Self::Output {
+        let Self(lhs) = self;
+        Self(lhs << rhs)
+    }
+}
+
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(!self.0)
     }
 }
