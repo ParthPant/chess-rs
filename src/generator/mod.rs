@@ -1,7 +1,7 @@
 pub mod tables;
 
+use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig, Square};
 use tables::*;
-use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig};
 
 pub struct MoveGenerator {
     rook_magics: [MagicEntry; 64],
@@ -47,109 +47,106 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
-    fn get_rook_atk(&self, sq: usize, blockers: BitBoard) -> BitBoard {
-        let magic = self.rook_magics[sq];
-        let moves = &self.rook_moves[sq];
+    fn get_rook_atk(&self, sq: Square, blockers: BitBoard) -> BitBoard {
+        let magic = self.rook_magics[sq as usize];
+        let moves = &self.rook_moves[sq as usize];
         moves[magic_index(&magic, blockers)]
     }
 
-    fn get_bishop_atk(&self, sq: usize, blockers: BitBoard) -> BitBoard {
-        let magic = self.bishop_magics[sq];
-        let moves = &self.bishop_moves[sq];
+    fn get_bishop_atk(&self, sq: Square, blockers: BitBoard) -> BitBoard {
+        let magic = self.bishop_magics[sq as usize];
+        let moves = &self.bishop_moves[sq as usize];
         moves[magic_index(&magic, blockers)]
     }
 
-    fn get_queen_atk(&self, sq: usize, blockers: BitBoard) -> BitBoard {
+    fn get_queen_atk(&self, sq: Square, blockers: BitBoard) -> BitBoard {
         self.get_rook_atk(sq, blockers) | self.get_bishop_atk(sq, blockers)
     }
 
-    fn get_white_pawn_atk(&self, sq: usize) -> BitBoard {
-        WP_ATK_TBL[sq].into()
+    fn get_white_pawn_atk(&self, sq: Square) -> BitBoard {
+        WP_ATK_TBL[sq as usize].into()
     }
 
-    fn get_black_pawn_atk(&self, sq: usize) -> BitBoard {
-        BP_ATK_TBL[sq].into()
+    fn get_black_pawn_atk(&self, sq: Square) -> BitBoard {
+        BP_ATK_TBL[sq as usize].into()
     }
 
-    fn get_knight_atk(&self, sq: usize) -> BitBoard {
-        N_ATK_TBL[sq].into()
+    fn get_knight_atk(&self, sq: Square) -> BitBoard {
+        N_ATK_TBL[sq as usize].into()
     }
 
-    fn get_king_atk(&self, sq: usize) -> BitBoard {
-        K_ATK_TBL[sq].into()
+    fn get_king_atk(&self, sq: Square) -> BitBoard {
+        K_ATK_TBL[sq as usize].into()
     }
 
-    fn get_rook_moves(&self, sq: usize, blockers: BitBoard, friendly: BitBoard) -> BitBoard {
+    fn get_rook_moves(&self, sq: Square, blockers: BitBoard, friendly: BitBoard) -> BitBoard {
         self.get_rook_atk(sq, blockers) & !friendly
     }
 
-    fn get_bishop_moves(&self, sq: usize, blockers: BitBoard, friendly: BitBoard) -> BitBoard {
+    fn get_bishop_moves(&self, sq: Square, blockers: BitBoard, friendly: BitBoard) -> BitBoard {
         self.get_bishop_atk(sq, blockers) & !friendly
     }
 
-    pub fn get_moves(
-        &self,
-        piece: BoardPiece,
-        pos: (usize, usize),
-        config: &BoardConfig,
-    ) -> BitBoard {
+    pub fn get_moves(&self, pos: Square, config: &BoardConfig) -> BitBoard {
+        let piece = config.get_at_sq(pos).unwrap();
         use BoardPiece::*;
         match piece {
             WhiteRook => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
-                self.get_rook_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_rook_moves(pos, blockers, friendly)
             }
             BlackRook => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
-                self.get_rook_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_rook_moves(pos, blockers, friendly)
             }
             WhiteBishop => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
-                self.get_bishop_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_bishop_moves(pos, blockers, friendly)
             }
             BlackBishop => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
-                self.get_bishop_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_bishop_moves(pos, blockers, friendly)
             }
             WhiteKnight => {
                 let friendly = config.white_occupancy();
-                self.get_knight_atk(pos.1 * 8 + pos.0) & !friendly
+                self.get_knight_atk(pos) & !friendly
             }
             BlackKnight => {
                 let friendly = config.black_occupancy();
-                self.get_knight_atk(pos.1 * 8 + pos.0) & !friendly
+                self.get_knight_atk(pos) & !friendly
             }
             WhiteKing => {
                 let friendly = config.white_occupancy();
-                self.get_king_atk(pos.1 * 8 + pos.0) & !friendly
+                self.get_king_atk(pos) & !friendly
             }
             BlackKing => {
                 let friendly = config.black_occupancy();
-                self.get_king_atk(pos.1 * 8 + pos.0) & !friendly
+                self.get_king_atk(pos) & !friendly
             }
             WhiteQueen => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
-                self.get_rook_moves(pos.1 * 8 + pos.0, blockers, friendly)
-                    | self.get_bishop_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly)
             }
             BlackQueen => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
-                self.get_rook_moves(pos.1 * 8 + pos.0, blockers, friendly)
-                    | self.get_bishop_moves(pos.1 * 8 + pos.0, blockers, friendly)
+                self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly)
             }
+            // TODO: Quite\Castling moves for pawns
             WhitePawn => {
-                let unfriendly = config.black_occupancy();
-                self.get_white_pawn_atk(pos.1 * 8 + pos.0) & unfriendly
+                let enemy = config.black_occupancy();
+                self.get_white_pawn_atk(pos) & enemy
             }
             BlackPawn => {
-                let unfriendly = config.white_occupancy();
-                self.get_black_pawn_atk(pos.1 * 8 + pos.0) & unfriendly
+                let enemy = config.white_occupancy();
+                self.get_black_pawn_atk(pos) & enemy
             }
         }
     }

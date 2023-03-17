@@ -1,12 +1,14 @@
 pub mod bitboard;
 mod fen;
 pub mod piece;
-
-use std::collections::HashMap;
+mod square;
 
 use bitboard::BitBoard;
 use fen::{Fen, PIECES_CHARS};
 use piece::{BoardPiece, Color};
+use std::collections::HashMap;
+
+pub use square::Square;
 
 pub type BoardMatrix = [[Option<BoardPiece>; 8]; 8];
 pub type BoardMap = HashMap<BoardPiece, BitBoard>;
@@ -16,7 +18,7 @@ pub struct BoardConfig {
     board_mat: BoardMatrix,
     fen_str: String,
     active_color: Color,
-    en_passant_target: Option<(usize, usize)>,
+    en_passant_target: Option<Square>,
     can_white_castle_queenside: bool,
     can_white_castle_kingside: bool,
     can_black_castle_queenside: bool,
@@ -52,19 +54,27 @@ impl BoardConfig {
         &self.fen_str
     }
 
-    pub fn get_at_xy(&self, x: usize, y: usize) -> Option<BoardPiece> {
+    pub fn get_at_sq(&self, sq: Square) -> Option<BoardPiece> {
+        let (x, y) = sq.into();
         self.board_mat[y][x]
     }
 
-    pub fn move_xy_to_xy(&mut self, prev: (usize, usize), new: (usize, usize)) {
+    pub fn make_move(&mut self, prev: Square, new: Square, _moves: BitBoard) {
         if prev != new {
-            let p = self.board_mat[prev.1][prev.0].unwrap();
+            let previ: (usize, usize) = prev.into();
+            let newi: (usize, usize) = new.into();
+
+            let p = self.board_mat[previ.1][previ.0].unwrap();
             let pcolor = p.get_color();
+            // prevent from making illegal move
+            // if !moves.is_set(new) {
+            //     return;
+            // }
             // prevent from moving when its not their turn
             if pcolor != self.active_color {
                 return;
             }
-            if let Some(to) = self.board_mat[new.1][new.0] {
+            if let Some(to) = self.board_mat[newi.1][newi.0] {
                 // prevent from moving to a square with piece of same color
                 if to.get_color() == pcolor {
                     return;
@@ -73,8 +83,8 @@ impl BoardConfig {
                 // TODO: Handle Captures
                 self.remove_from_bitboard(to, new);
             }
-            self.board_mat[new.1][new.0] = self.board_mat[prev.1][prev.0];
-            self.board_mat[prev.1][prev.0] = None;
+            self.board_mat[newi.1][newi.0] = self.board_mat[previ.1][previ.0];
+            self.board_mat[previ.1][previ.0] = None;
             self.toggle_active_color();
             if pcolor == Color::Black {
                 self.fullmove_number += 1;
@@ -82,7 +92,7 @@ impl BoardConfig {
             self.halfmove_clock += 1;
             self.fen_str = Fen::make_fen_from_config(&self);
             self.update_bitboard(p, prev, new);
-            log::info!("Move {:?} to {:?}", prev, new);
+            log::info!("Move {} to {}", prev, new);
             log::info!("Fen: {}", self.fen_str);
         }
     }
@@ -107,7 +117,7 @@ impl BoardConfig {
         self.can_black_castle_kingside
     }
 
-    pub fn get_en_passant_target(&self) -> Option<(usize, usize)> {
+    pub fn get_en_passant_target(&self) -> Option<Square> {
         self.en_passant_target
     }
 
@@ -173,21 +183,21 @@ impl BoardConfig {
                 if let Some(p) = self.board_mat[y][x] {
                     let b = self.bitboards.entry(p).or_default();
                     log::debug!("add {} to bit {}", p, 8 * y + x);
-                    b.add(x, y);
+                    b.set((x, y).try_into().unwrap());
                 }
             }
         }
     }
 
-    fn update_bitboard(&mut self, p: BoardPiece, prev: (usize, usize), new: (usize, usize)) {
+    fn update_bitboard(&mut self, p: BoardPiece, prev: Square, new: Square) {
         self.bitboards.entry(p).and_modify(|b| {
-            b.move_xy_to_xy(prev, new);
+            b.make_move(prev, new);
         });
     }
 
-    fn remove_from_bitboard(&mut self, p: BoardPiece, pos: (usize, usize)) {
+    fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {
         self.bitboards.entry(p).and_modify(|b| {
-            b.unset(pos.1 * 8 + pos.0);
+            b.unset(pos);
         });
     }
 }

@@ -100,12 +100,10 @@ impl App {
                 }
                 Event::MainEventsCleared => {
                     if let Some((prev, new)) = board.get_user_move() {
-                        config.borrow_mut().move_xy_to_xy(prev, new);
+                        config.borrow_mut().make_move(prev, new, moves);
                     }
-                    if let Some((piece, pos)) = board.get_picked_piece() {
-                        moves = generator.get_moves(piece, pos, &(*config).borrow());
-                    } else {
-                        moves = BitBoard::from(0);
+                    if let Some(sq) = board.get_picked_piece() {
+                        moves = generator.get_moves(sq, &(*config).borrow());
                     }
                     window.request_redraw();
                 }

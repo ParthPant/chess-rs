@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::piece::{BoardPiece, BoardPiece::*, Color};
+use super::square::Square;
 use super::BoardConfig;
 use super::BoardMatrix;
 use lazy_static::lazy_static;
@@ -41,7 +42,7 @@ impl Fen {
         for y in (0..8).rev() {
             let mut empty = 0;
             for x in 0..8 {
-                if let Some(p) = c.get_at_xy(x, y) {
+                if let Some(p) = c.get_at_sq((x, y).try_into().unwrap()) {
                     if empty > 0 {
                         s.push_str(&empty.to_string());
                         empty = 0;
@@ -74,7 +75,7 @@ impl Fen {
         }
         s.push(' ');
         if let Some(pos) = c.get_en_passant_target() {
-            s.push_str(&Fen::get_code_from_mat_coords(pos.0, pos.1));
+            s.push_str(&pos.to_string().to_lowercase());
         } else {
             s.push('-');
         }
@@ -122,7 +123,7 @@ impl Fen {
         }
     }
 
-    fn get_matrix_coords_from_code(s: &str) -> (usize, usize) {
+    fn get_sq_from_code(s: &str) -> Square {
         let a = 'a'.to_ascii_lowercase() as usize;
 
         let mut it = s.chars();
@@ -140,7 +141,7 @@ impl Fen {
 
         log::debug!("decode {} to {:?}", s, (x, y));
 
-        (x, y)
+        (x, y).try_into().unwrap()
     }
 
     // TODO: Return Result with custom error type
@@ -151,7 +152,7 @@ impl Fen {
         let mut can_white_castle_kingside = false;
         let mut can_black_castle_queenside = false;
         let mut can_black_castle_kingside = false;
-        let mut en_passant_target: Option<(usize, usize)> = None;
+        let mut en_passant_target: Option<Square> = None;
         let mut halfmove_clock = 0;
         let mut fullmove_number = 0;
         let mut active_color = Color::White;
@@ -214,7 +215,7 @@ impl Fen {
                 3 => {
                     if data.len() == 1 && data.chars().next() == Some('-') {
                     } else {
-                        en_passant_target = Some(Self::get_matrix_coords_from_code(data));
+                        en_passant_target = Some(Self::get_sq_from_code(data));
                     }
                 }
                 4 => {

@@ -1,3 +1,4 @@
+use super::square::Square;
 use std::cmp::PartialEq;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
@@ -6,41 +7,25 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
 pub struct BitBoard(u64);
 
 impl BitBoard {
-    pub fn add(&mut self, x: usize, y: usize) {
-        self.0 |= (1 as u64) << Self::bit_from_xy(x, y);
+    pub fn set(&mut self, sq: Square) {
+        self.0 |= (1 as u64) << sq as usize;
     }
 
-    pub fn remove(&mut self, x: usize, y: usize) {
-        self.0 &= !((1 as u64) << Self::bit_from_xy(x, y) as u64);
+    pub fn unset(&mut self, sq: Square) {
+        self.0 &= !((1 as u64) << sq as usize);
     }
 
-    pub fn set(&mut self, sq: usize) {
-        self.0 |= (1 as u64) << sq;
+    pub fn is_set(&self, sq: Square) -> bool {
+        self.0 & ((1 as u64) << sq as usize) > 0
     }
 
-    pub fn unset(&mut self, sq: usize) {
-        self.0 &= !((1 as u64) << sq);
-    }
-
-    pub fn is_set(&self, sq: usize) -> bool {
-        self.0 & ((1 as u64) << sq) > 0
-    }
-
-    pub fn move_xy_to_xy(&mut self, prev: (usize, usize), new: (usize, usize)) {
-        self.remove(prev.0, prev.1);
-        self.add(new.0, new.1);
+    pub fn make_move(&mut self, prev: Square, new: Square) {
+        self.unset(prev);
+        self.set(new);
     }
 
     pub fn data(&self) -> u64 {
         self.0
-    }
-
-    fn bit_from_xy(x: usize, y: usize) -> u64 {
-        (y * 8 + x) as u64
-    }
-
-    fn xy_from_bit(i: usize) -> (usize, usize) {
-        (i % 8, i / 8)
     }
 }
 

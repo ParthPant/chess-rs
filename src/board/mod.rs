@@ -1,7 +1,7 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig};
+use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig, Square};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};
@@ -16,10 +16,10 @@ pub struct Board {
     font: fontdue::Font,
     glyph_cache: Cache<usvg::Tree>,
     raster_cache: Cache<tiny_skia::Pixmap>,
-    picked_piece: Option<(BoardPiece, (usize, usize))>,
+    picked_piece: Option<Square>,
     mouse_state: MouseState,
     // TODO: Make a better representation for Moves
-    user_move: Option<((usize, usize), (usize, usize))>,
+    user_move: Option<(Square, Square)>,
 }
 
 impl Default for Board {
@@ -45,36 +45,32 @@ impl Default for Board {
 }
 
 impl Board {
-    pub fn get_user_move(&mut self) -> Option<((usize, usize), (usize, usize))> {
+    pub fn get_user_move(&mut self) -> Option<(Square, Square)> {
         let umove = self.user_move;
         self.user_move = None;
         umove
     }
 
-    pub fn get_picked_piece(&self) -> Option<(BoardPiece, (usize, usize))> {
+    pub fn get_picked_piece(&self) -> Option<Square> {
         self.picked_piece
     }
 
     pub fn handle_event(&mut self, e: BoardEvent, config: &BoardConfig) {
         self.update_mouse_state(e);
 
-        let check_side = self.get_check_side() as u32;
-
-        let pos = self.mouse_state.get_pos();
-        let x = (pos.0 as u32 / check_side) as usize;
-        let y = 7 - (pos.1 as u32 / check_side) as usize;
+        let sq = self.get_sq_from_pointer();
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
-                if let Some(p) = config.get_at_xy(x, y) {
-                    self.picked_piece = Some((p, (x, y)));
+                if let Some(_) = config.get_at_sq(sq) {
+                    self.picked_piece = Some(sq);
                 }
             }
         }
 
         if !self.mouse_state.get_is_left_pressed() {
-            if let Some((_, prev)) = self.picked_piece {
-                self.user_move = Some((prev, (x, y)));
+            if let Some(prev) = self.picked_piece {
+                self.user_move = Some((prev, sq));
                 self.picked_piece = None;
             }
         }
@@ -187,17 +183,19 @@ impl Board {
                     (7 - y) as f32 * check_side,
                 );
                 pixmap.fill_rect(rect, paint, t, None);
-                if moves.is_set(y * 8 + x) {
-                    pixmap.fill_rect(rect, &highlight_paint, t, None);
+                if let Some(_) = self.picked_piece {
+                    if moves.is_set((x, y).try_into().unwrap()) {
+                        pixmap.fill_rect(rect, &highlight_paint, t, None);
+                    }
                 }
 
-                if let Some((_, (picked_x, picked_y))) = self.picked_piece {
-                    if x == picked_x && y == picked_y {
+                if let Some(picked_sq) = self.picked_piece {
+                    if (x, y) == picked_sq.into() {
                         continue;
                     }
                 }
 
-                if let Some(p) = config.get_at_xy(x, y).to_owned() {
+                if let Some(p) = config.get_at_sq((x, y).try_into().unwrap()).to_owned() {
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number
@@ -211,7 +209,8 @@ impl Board {
         }
 
         // Draw the picked piece if any
-        if let Some((p, _)) = self.picked_piece {
+        if let Some(sq) = self.picked_piece {
+            let p = config.get_at_sq(sq).unwrap();
             let tree = self.get_glyph_tree(&p);
 
             let pos = self.mouse_state.get_pos();
@@ -277,15 +276,24 @@ impl Board {
             },
             BoardEvent::CursorMoved { position } => {
                 self.mouse_state.set_cursor_in();
-                if position.0 as u32 > self.ruler_offset && (position.1 as u32) < self.side_length {
-                    let position = (position.0, position.1);
-                    self.mouse_state.update_pos(position);
-                }
+                // if position.0 as u32 > self.ruler_offset && (position.1 as u32) < self.side_length {
+                let position = (position.0, position.1);
+                self.mouse_state.update_pos(position);
+                // }
             }
             BoardEvent::CursorLeft => {
                 self.mouse_state.unset_cursor_in();
             }
         }
+    }
+
+    fn get_sq_from_pointer(&self) -> Square {
+        let pos = self.mouse_state.get_pos();
+        let check_side = self.get_check_side() as usize;
+        let off = self.ruler_offset as usize;
+        let x = (pos.0.clamp(off, off + self.side_length as usize - 1) - off) / check_side as usize;
+        let y = 7 - (pos.1.clamp(0, self.side_length as usize - 1) / check_side as usize);
+        (x, y).try_into().unwrap()
     }
 
     fn get_font_src() -> Vec<u8> {
