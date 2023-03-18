@@ -100,10 +100,13 @@ impl App {
                 }
                 Event::MainEventsCleared => {
                     if let Some((prev, new)) = board.get_user_move() {
-                        config.borrow_mut().make_move(prev, new, moves);
+                        if moves.is_set(new) {
+                            config.borrow_mut().make_move(prev, new);
+                        }
                     }
                     if let Some(sq) = board.get_picked_piece() {
-                        moves = generator.get_moves(sq, &(*config).borrow());
+                        let p = config.borrow().get_at_sq(sq).unwrap();
+                        moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
                     }
                     window.request_redraw();
                 }

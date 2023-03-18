@@ -62,8 +62,10 @@ impl Board {
 
         if self.mouse_state.get_is_left_pressed() {
             if let None = self.picked_piece {
-                if let Some(_) = config.get_at_sq(sq) {
-                    self.picked_piece = Some(sq);
+                if let Some(p) = config.get_at_sq(sq) {
+                    if p.get_color() == config.get_active_color() {
+                        self.picked_piece = Some(sq);
+                    }
                 }
             }
         }

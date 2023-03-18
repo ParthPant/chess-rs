@@ -87,8 +87,8 @@ impl MoveGenerator {
         self.get_bishop_atk(sq, blockers) & !friendly
     }
 
-    pub fn get_moves(&self, pos: Square, config: &BoardConfig) -> BitBoard {
-        let piece = config.get_at_sq(pos).unwrap();
+    // TODO: Quite moves for pawns and Casteling
+    pub fn gen_piece_moves(&self, piece: BoardPiece, pos: Square, config: &BoardConfig) -> BitBoard {
         use BoardPiece::*;
         match piece {
             WhiteRook => {
@@ -139,14 +139,41 @@ impl MoveGenerator {
                 self.get_rook_moves(pos, blockers, friendly)
                     | self.get_bishop_moves(pos, blockers, friendly)
             }
-            // TODO: Quite\Castling moves for pawns
             WhitePawn => {
+                let friendly = config.white_occupancy();
                 let enemy = config.black_occupancy();
-                self.get_white_pawn_atk(pos) & enemy
+                let quiet = {
+                    if pos < Square::H7 {
+                        // not in rank 8
+                        let single = BitBoard::from(1 << (pos as usize + 8)) & !friendly & !enemy;
+                        if pos >= Square::A2 && pos <= Square::H2 && single > BitBoard::from(0) {
+                            single | BitBoard::from(1 << (pos as usize + 16))
+                        } else {
+                            single
+                        }
+                    } else {
+                        BitBoard::from(0)
+                    }
+                };
+                (quiet & !friendly & !enemy) | (self.get_white_pawn_atk(pos) & enemy)
             }
             BlackPawn => {
+                let friendly = config.black_occupancy();
                 let enemy = config.white_occupancy();
-                self.get_black_pawn_atk(pos) & enemy
+                let quiet = {
+                    if pos > Square::A2 {
+                        // not in rank 1
+                        let single = BitBoard::from(1 << (pos as usize - 8)) & !friendly & !enemy;
+                        if pos >= Square::A7 && pos <= Square::H7 && single > BitBoard::from(0) {
+                            single | BitBoard::from(1 << (pos as usize - 16))
+                        } else {
+                            single
+                        }
+                    } else {
+                        BitBoard::from(0)
+                    }
+                };
+                (quiet & !friendly & !enemy) | (self.get_black_pawn_atk(pos) & enemy)
             }
         }
     }

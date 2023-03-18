@@ -59,17 +59,14 @@ impl BoardConfig {
         self.board_mat[y][x]
     }
 
-    pub fn make_move(&mut self, prev: Square, new: Square, _moves: BitBoard) {
+    pub fn make_move(&mut self, prev: Square, new: Square) {
         if prev != new {
             let previ: (usize, usize) = prev.into();
             let newi: (usize, usize) = new.into();
 
             let p = self.board_mat[previ.1][previ.0].unwrap();
             let pcolor = p.get_color();
-            // prevent from making illegal move
-            // if !moves.is_set(new) {
-            //     return;
-            // }
+
             // prevent from moving when its not their turn
             if pcolor != self.active_color {
                 return;
