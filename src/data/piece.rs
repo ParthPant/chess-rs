@@ -1,50 +1,38 @@
-use std::fmt;
+use strum_macros::{Display, EnumString};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display)]
 pub enum Color {
     White,
     Black,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display, EnumString)]
 pub enum BoardPiece {
+    #[strum(serialize="K")]
     WhiteKing,
+    #[strum(serialize="R")]
     WhiteRook,
+    #[strum(serialize="B")]
     WhiteBishop,
+    #[strum(serialize="Q")]
     WhiteQueen,
+    #[strum(serialize="N")]
     WhiteKnight,
+    #[strum(serialize="P")]
     WhitePawn,
 
+    #[strum(serialize="k")]
     BlackKing,
+    #[strum(serialize="r")]
     BlackRook,
+    #[strum(serialize="b")]
     BlackBishop,
+    #[strum(serialize="q")]
     BlackQueen,
+    #[strum(serialize="n")]
     BlackKnight,
+    #[strum(serialize="p")]
     BlackPawn,
-}
-
-impl fmt::Display for BoardPiece {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BoardPiece::*;
-
-        let name = match self {
-            WhiteKing => "K",
-            WhiteRook => "R",
-            WhiteBishop => "B",
-            WhiteQueen => "Q",
-            WhiteKnight => "N",
-            WhitePawn => "P",
-
-            BlackKing => "k",
-            BlackRook => "r",
-            BlackBishop => "b",
-            BlackQueen => "q",
-            BlackKnight => "n",
-            BlackPawn => "p",
-        };
-
-        write!(f, "{}", name)
-    }
 }
 
 impl BoardPiece {

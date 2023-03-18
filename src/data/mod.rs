@@ -4,9 +4,9 @@ pub mod piece;
 mod square;
 
 use bitboard::BitBoard;
-use fen::{Fen, PIECES_CHARS};
+use fen::Fen;
 use piece::{BoardPiece, Color};
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 pub use square::Square;
 
@@ -130,8 +130,8 @@ impl BoardConfig {
     }
 
     pub fn get_bit_board(&self, c: char) -> Option<BitBoard> {
-        if let Some(p) = PIECES_CHARS.get(&c) {
-            if let Some(b) = self.bitboards.get(p) {
+        if let Ok(p) = BoardPiece::from_str(&c.to_string()) {
+            if let Some(b) = self.bitboards.get(&p) {
                 return Some(*b);
             }
         }

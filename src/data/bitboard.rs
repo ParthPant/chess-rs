@@ -27,6 +27,17 @@ impl BitBoard {
     pub fn data(&self) -> u64 {
         self.0
     }
+    
+    pub fn pop_sq(&mut self) -> Option<Square> {
+        let tzs = self.0.trailing_zeros();
+        if tzs == 64 {
+            None
+        } else {
+            let sq: Square  = (1 << tzs as usize).try_into().unwrap();
+            self.unset(sq);
+            Some(sq)
+        }
+    }
 }
 
 impl PartialEq<u64> for BitBoard {

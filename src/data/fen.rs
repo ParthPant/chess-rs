@@ -1,36 +1,12 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use super::piece::{BoardPiece, BoardPiece::*, Color};
+use super::piece::{BoardPiece, Color};
 use super::square::Square;
 use super::BoardConfig;
 use super::BoardMatrix;
-use lazy_static::lazy_static;
 
-lazy_static! {
-    pub static ref PIECES_CHARS: HashMap<char, BoardPiece> = {
-        let mut m = HashMap::new();
-        m.insert('k', BlackKing);
-        m.insert('K', WhiteKing);
-
-        m.insert('r', BlackRook);
-        m.insert('R', WhiteRook);
-
-        m.insert('b', BlackBishop);
-        m.insert('B', WhiteBishop);
-
-        m.insert('q', BlackQueen);
-        m.insert('Q', WhiteQueen);
-
-        m.insert('n', BlackKnight);
-        m.insert('N', WhiteKnight);
-
-        m.insert('p', BlackPawn);
-        m.insert('P', WhitePawn);
-        m
-    };
-}
-
-pub struct Fen {}
+pub struct Fen;
 
 impl Fen {
     pub fn make_config_from_str(s: &str) -> BoardConfig {
@@ -92,30 +68,8 @@ impl Fen {
         std::str::from_utf8(&[c, y]).unwrap().to_string()
     }
 
-    // fn get_c_from_piece(p: BoardPiece) -> char {
-    //     match p {
-    //         BlackKing => 'k',
-    //         WhiteKing => 'K',
-    //
-    //         BlackRook => 'r',
-    //         WhiteRook => 'R',
-    //
-    //         BlackBishop => 'b',
-    //         WhiteBishop => 'B',
-    //
-    //         BlackQueen => 'q',
-    //         WhiteQueen => 'Q',
-    //
-    //         BlackKnight => 'n',
-    //         WhiteKnight => 'N',
-    //
-    //         BlackPawn => 'p',
-    //         WhitePawn => 'P',
-    //     }
-    // }
-
     fn get_piece_from_c(c: char) -> BoardPiece {
-        if let Some(p) = PIECES_CHARS.get(&c).cloned() {
+        if let Ok(p) = BoardPiece::from_str(&c.to_string()) {
             p
         } else {
             log::error!("Fen Error: {} is invalid piece", c);

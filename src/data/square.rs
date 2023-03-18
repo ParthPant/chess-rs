@@ -1,5 +1,5 @@
 use std::convert::{Into, TryFrom};
-use std::fmt;
+use strum_macros::{EnumIter, EnumString, Display};
 
 macro_rules! make_enum {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
@@ -20,20 +20,13 @@ macro_rules! make_enum {
                 }
             }
         }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                match self {
-                    $($name::$vname => write!(f, "{}", stringify!($vname)),)*
-                }
-            }
-        }
     }
 }
 
 make_enum! {
     #[repr(u8)]
-    #[derive(Eq, PartialEq, Debug, Clone, Copy)]
+    #[derive(Eq, PartialEq, Debug, Clone, Copy, EnumIter, EnumString, Display)]
+    #[strum(ascii_case_insensitive)]
     pub enum Square {
         A1, B1, C1, D1, E1, F1, G1, H1,
         A2, B2, C2, D2, E2, F2, G2, H2,
