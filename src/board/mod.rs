@@ -44,10 +44,12 @@ impl Default for Board {
 }
 
 impl Board {
-    pub fn get_user_move(&mut self) -> Option<Move> {
-        let umove = self.user_move;
-        self.user_move = None;
-        umove
+    pub fn get_user_move(&mut self) -> &Option<Move> {
+        &self.user_move
+    }
+
+    pub fn clear_user_move(&mut self) {
+        self.user_move = None
     }
 
     pub fn get_picked_piece(&self) -> Option<Square> {

@@ -110,44 +110,42 @@ impl MoveGenerator {
             WhiteKing => {
                 let friendly = config.white_occupancy();
                 let all = config.all_occupancy();
-                let moves = self.get_king_atk(pos) & !friendly;
-                let mut moves = Self::make_movelist(moves, pos, config);
+                let mut moves = self.get_king_atk(pos) & !friendly;
                 if config.get_can_white_castle_kingside() {
                     if !(all.is_set(Square::F1) || all.is_set(Square::G1))
                         && !self.is_sq_attacked(Square::F1, Color::Black, config)
                     {
-                        moves.add(Move::new(pos, Square::G1, false, true, false, false, None));
+                        moves.set(Square::G1);
                     }
                 }
                 if config.get_can_white_castle_queenside() {
                     if !(all.is_set(Square::B1) || all.is_set(Square::C1) || all.is_set(Square::D1))
                         && !self.is_sq_attacked(Square::D1, Color::Black, config)
                     {
-                        moves.add(Move::new(pos, Square::C1, false, false, true, false, None));
+                        moves.set(Square::C1);
                     }
                 }
-                moves
+                Self::make_movelist(moves, pos, config)
             }
             BlackKing => {
                 let friendly = config.black_occupancy();
                 let all = config.all_occupancy();
-                let moves = self.get_king_atk(pos) & !friendly;
-                let mut moves = Self::make_movelist(moves, pos, config);
+                let mut moves = self.get_king_atk(pos) & !friendly;
                 if config.get_can_black_castle_kingside() {
                     if !(all.is_set(Square::F8) || all.is_set(Square::G8))
                         && !self.is_sq_attacked(Square::F8, Color::White, config)
                     {
-                        moves.add(Move::new(pos, Square::G8, false, true, false, false, None));
+                        moves.set(Square::G8);
                     }
                 }
                 if config.get_can_black_castle_queenside() {
                     if !(all.is_set(Square::B8) || all.is_set(Square::C8) || all.is_set(Square::D8))
                         && !self.is_sq_attacked(Square::D8, Color::White, config)
                     {
-                        moves.add(Move::new(pos, Square::C8, false, false, true, false, None));
+                        moves.set(Square::C8);
                     }
                 }
-                moves
+                Self::make_movelist(moves, pos, config)
             }
             // TODO: Pawn Promotion
             WhitePawn => {

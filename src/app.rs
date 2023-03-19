@@ -1,5 +1,5 @@
 use crate::board::{events::BoardEvent, Board};
-use crate::data::{BoardConfig, MoveList, Square};
+use crate::data::{BoardConfig, Move, MoveList, Square};
 use crate::generator::MoveGenerator;
 use crate::ui::GuiFramework;
 
@@ -100,10 +100,11 @@ impl App {
                     }
                 }
                 Event::MainEventsCleared => {
-                    if let Some(m) = board.get_user_move() {
-                        if moves.has_target_sq(m.to) {
-                            config.borrow_mut().make_move(&m);
+                    if let Some(user_move) = board.get_user_move() {
+                        if moves.has_target_sq(user_move.to) {
+                            user_move.apply(&mut config.borrow_mut());
                         }
+                        board.clear_user_move();
                     }
                     let sq = board.get_picked_piece();
                     if sq != picked_sq {

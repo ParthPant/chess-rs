@@ -65,113 +65,6 @@ impl BoardConfig {
         self.board_mat[y][x]
     }
 
-    pub fn make_move(&mut self, m: &Move) {
-        let prev = m.from;
-        let new = m.to;
-        if prev != new {
-            let previ: (usize, usize) = prev.into();
-            let newi: (usize, usize) = new.into();
-            let p = self.board_mat[previ.1][previ.0].unwrap();
-            let pcolor = p.get_color();
-
-            // prevent from moving when its not their turn
-            if pcolor != self.active_color {
-                return;
-            }
-            if let Some(cap) = self.board_mat[newi.1][newi.0] {
-                // prevent from moving to a square with piece of same color
-                if cap.get_color() == pcolor {
-                    return;
-                }
-                // capture piece
-                // TODO: Handle Captures
-                self.remove_piece(m.to);
-            }
-
-            if m.ep {
-                self.en_passant_target = None;
-                self.move_piece(m.from, m.to);
-                if pcolor == Color::White {
-                    self.remove_piece(Square::try_from(m.to as usize - 8).unwrap());
-                } else {
-                    self.remove_piece(Square::try_from(m.to as usize + 8).unwrap());
-                }
-            } else if m.castle_oo {
-                if pcolor == Color::White {
-                    self.move_piece(Square::E1, Square::G1);
-                    self.move_piece(Square::H1, Square::F1);
-                }
-                if pcolor == Color::Black {
-                    self.move_piece(Square::E8, Square::G8);
-                    self.move_piece(Square::H8, Square::F8);
-                }
-            } else if m.castle_ooo {
-                if pcolor == Color::White {
-                    self.move_piece(Square::E1, Square::C1);
-                    self.move_piece(Square::A1, Square::D1);
-                }
-                if pcolor == Color::Black {
-                    self.move_piece(Square::E8, Square::C8);
-                    self.move_piece(Square::A8, Square::D8);
-                }
-            } else if let Some(promotion) = m.promotion {
-                self.remove_piece(m.from);
-                self.add_piece(promotion, m.to);
-            } else {
-                self.move_piece(m.from, m.to);
-            }
-            self.toggle_active_color();
-            if m.castle_oo || m.castle_oo {
-                if pcolor == Color::White {
-                    self.can_white_castle_kingside = false;
-                    self.can_white_castle_queenside = false;
-                }
-                if pcolor == Color::Black {
-                    self.can_black_castle_kingside = false;
-                    self.can_black_castle_queenside = false;
-                }
-            }
-            if p == BoardPiece::WhiteRook {
-                if m.from == Square::A1 {
-                    self.can_white_castle_queenside = false;
-                } else if m.from == Square::H1 {
-                    self.can_white_castle_kingside = false;
-                }
-            }
-            if p == BoardPiece::BlackRook {
-                if m.from == Square::A8 {
-                    self.can_black_castle_queenside = false;
-                } else if m.from == Square::H8 {
-                    self.can_black_castle_kingside = false;
-                }
-            }
-            if p == BoardPiece::WhiteKing {
-                self.can_white_castle_kingside = false;
-                self.can_white_castle_queenside = false;
-            }
-            if p == BoardPiece::BlackKing {
-                self.can_black_castle_kingside = false;
-                self.can_black_castle_queenside = false;
-            }
-            if m.double_push {
-                if pcolor == Color::White {
-                    self.en_passant_target = Some(Square::try_from(m.to as usize - 8).unwrap());
-                } else {
-                    self.en_passant_target = Some(Square::try_from(m.to as usize + 8).unwrap());
-                }
-            } else {
-                self.en_passant_target = None;
-            }
-            if pcolor == Color::Black {
-                self.fullmove_number += 1;
-            }
-            self.halfmove_clock += 1;
-            self.fen_str = Fen::make_fen_from_config(&self);
-            log::info!("Move {:?}", m);
-            log::info!("Fen: {}", self.fen_str);
-        }
-    }
-
     pub fn get_active_color(&self) -> Color {
         self.active_color
     }
@@ -258,9 +151,10 @@ impl BoardConfig {
 
     fn remove_piece(&mut self, from: Square) {
         let loc: (usize, usize) = from.into();
-        let p = self.board_mat[loc.1][loc.0].unwrap();
-        self.board_mat[loc.1][loc.0] = None;
-        self.remove_from_bitboard(p, from)
+        if let Some(p) = self.board_mat[loc.1][loc.0] {
+            self.board_mat[loc.1][loc.0] = None;
+            self.remove_from_bitboard(p, from)
+        }
     }
 
     fn add_piece(&mut self, p: BoardPiece, to: Square) {
