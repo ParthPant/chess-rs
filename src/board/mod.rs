@@ -1,7 +1,7 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig, Square};
+use crate::data::{piece::BoardPiece, BoardConfig, Move, MoveList, Square};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};
@@ -18,8 +18,7 @@ pub struct Board {
     raster_cache: Cache<tiny_skia::Pixmap>,
     picked_piece: Option<Square>,
     mouse_state: MouseState,
-    // TODO: Make a better representation for Moves
-    user_move: Option<(Square, Square)>,
+    user_move: Option<Move>,
 }
 
 impl Default for Board {
@@ -45,7 +44,7 @@ impl Default for Board {
 }
 
 impl Board {
-    pub fn get_user_move(&mut self) -> Option<(Square, Square)> {
+    pub fn get_user_move(&mut self) -> Option<Move> {
         let umove = self.user_move;
         self.user_move = None;
         umove
@@ -72,7 +71,7 @@ impl Board {
 
         if !self.mouse_state.get_is_left_pressed() {
             if let Some(prev) = self.picked_piece {
-                self.user_move = Some((prev, sq));
+                self.user_move = Some(Move::infer(prev, sq, config));
                 self.picked_piece = None;
             }
         }
@@ -82,7 +81,7 @@ impl Board {
         }
     }
 
-    pub fn draw(&mut self, frame: &mut [u8], config: &BoardConfig, moves: &BitBoard) {
+    pub fn draw(&mut self, frame: &mut [u8], config: &BoardConfig, moves: &MoveList) {
         let size = self.get_draw_area_side();
         let mut pixmap = tiny_skia::Pixmap::new(size, size).unwrap();
 
@@ -186,7 +185,7 @@ impl Board {
                 );
                 pixmap.fill_rect(rect, paint, t, None);
                 if let Some(_) = self.picked_piece {
-                    if moves.is_set((x, y).try_into().unwrap()) {
+                    if moves.has_target_sq((x, y).try_into().unwrap()) {
                         pixmap.fill_rect(rect, &highlight_paint, t, None);
                     }
                 }

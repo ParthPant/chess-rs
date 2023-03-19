@@ -1,4 +1,4 @@
-use strum_macros::{Display, EnumString};
+use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display)]
 pub enum Color {
@@ -6,32 +6,32 @@ pub enum Color {
     Black,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display, EnumString)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display, EnumString, EnumIter)]
 pub enum BoardPiece {
-    #[strum(serialize="K")]
+    #[strum(serialize = "K")]
     WhiteKing,
-    #[strum(serialize="R")]
+    #[strum(serialize = "R")]
     WhiteRook,
-    #[strum(serialize="B")]
+    #[strum(serialize = "B")]
     WhiteBishop,
-    #[strum(serialize="Q")]
+    #[strum(serialize = "Q")]
     WhiteQueen,
-    #[strum(serialize="N")]
+    #[strum(serialize = "N")]
     WhiteKnight,
-    #[strum(serialize="P")]
+    #[strum(serialize = "P")]
     WhitePawn,
 
-    #[strum(serialize="k")]
+    #[strum(serialize = "k")]
     BlackKing,
-    #[strum(serialize="r")]
+    #[strum(serialize = "r")]
     BlackRook,
-    #[strum(serialize="b")]
+    #[strum(serialize = "b")]
     BlackBishop,
-    #[strum(serialize="q")]
+    #[strum(serialize = "q")]
     BlackQueen,
-    #[strum(serialize="n")]
+    #[strum(serialize = "n")]
     BlackKnight,
-    #[strum(serialize="p")]
+    #[strum(serialize = "p")]
     BlackPawn,
 }
 

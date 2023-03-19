@@ -1,5 +1,5 @@
 use std::convert::{Into, TryFrom};
-use strum_macros::{EnumIter, EnumString, Display};
+use strum_macros::{Display, EnumIter, EnumString};
 
 macro_rules! make_enum {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {

@@ -1,6 +1,10 @@
 pub mod tables;
 
-use crate::data::{bitboard::BitBoard, piece::BoardPiece, BoardConfig, Square};
+use crate::data::{
+    bitboard::BitBoard,
+    piece::{BoardPiece, Color},
+    BoardConfig, Move, MoveList, Square,
+};
 use tables::*;
 
 pub struct MoveGenerator {
@@ -47,6 +51,223 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
+    pub fn gen_piece_moves(
+        &self,
+        piece: BoardPiece,
+        pos: Square,
+        config: &BoardConfig,
+    ) -> MoveList {
+        use BoardPiece::*;
+        match piece {
+            WhiteRook => {
+                let blockers = config.all_occupancy();
+                let friendly = config.white_occupancy();
+                let moves = self.get_rook_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            BlackRook => {
+                let blockers = config.all_occupancy();
+                let friendly = config.black_occupancy();
+                let moves = self.get_rook_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            WhiteBishop => {
+                let blockers = config.all_occupancy();
+                let friendly = config.white_occupancy();
+                let moves = self.get_bishop_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            BlackBishop => {
+                let blockers = config.all_occupancy();
+                let friendly = config.black_occupancy();
+                let moves = self.get_bishop_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            WhiteKnight => {
+                let friendly = config.white_occupancy();
+                let moves = self.get_knight_atk(pos) & !friendly;
+                Self::make_movelist(moves, pos, config)
+            }
+            BlackKnight => {
+                let friendly = config.black_occupancy();
+                let moves = self.get_knight_atk(pos) & !friendly;
+                Self::make_movelist(moves, pos, config)
+            }
+            WhiteQueen => {
+                let blockers = config.all_occupancy();
+                let friendly = config.white_occupancy();
+                let moves = self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            BlackQueen => {
+                let blockers = config.all_occupancy();
+                let friendly = config.black_occupancy();
+                let moves = self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly);
+                Self::make_movelist(moves, pos, config)
+            }
+            WhiteKing => {
+                let friendly = config.white_occupancy();
+                let all = config.all_occupancy();
+                let moves = self.get_king_atk(pos) & !friendly;
+                let mut moves = Self::make_movelist(moves, pos, config);
+                if config.get_can_white_castle_kingside() {
+                    if !(all.is_set(Square::F1) || all.is_set(Square::G1))
+                        && !self.is_sq_attacked(Square::F1, Color::Black, config)
+                    {
+                        moves.add(Move::new(pos, Square::G1, false, true, false, false, None));
+                    }
+                }
+                if config.get_can_white_castle_queenside() {
+                    if !(all.is_set(Square::B1) || all.is_set(Square::C1) || all.is_set(Square::D1))
+                        && !self.is_sq_attacked(Square::D1, Color::Black, config)
+                    {
+                        moves.add(Move::new(pos, Square::C1, false, false, true, false, None));
+                    }
+                }
+                moves
+            }
+            BlackKing => {
+                let friendly = config.black_occupancy();
+                let all = config.all_occupancy();
+                let moves = self.get_king_atk(pos) & !friendly;
+                let mut moves = Self::make_movelist(moves, pos, config);
+                if config.get_can_black_castle_kingside() {
+                    if !(all.is_set(Square::F8) || all.is_set(Square::G8))
+                        && !self.is_sq_attacked(Square::F8, Color::White, config)
+                    {
+                        moves.add(Move::new(pos, Square::G8, false, true, false, false, None));
+                    }
+                }
+                if config.get_can_black_castle_queenside() {
+                    if !(all.is_set(Square::B8) || all.is_set(Square::C8) || all.is_set(Square::D8))
+                        && !self.is_sq_attacked(Square::D8, Color::White, config)
+                    {
+                        moves.add(Move::new(pos, Square::C8, false, false, true, false, None));
+                    }
+                }
+                moves
+            }
+            // TODO: Pawn Promotion
+            WhitePawn => {
+                let friendly = config.white_occupancy();
+                let enemy = config.black_occupancy();
+                let quiet = {
+                    if pos < Square::H7 {
+                        // not in rank 8
+                        let single = BitBoard::from(1 << (pos as usize + 8)) & !friendly & !enemy;
+                        if pos >= Square::A2 && pos <= Square::H2 && single > BitBoard::from(0) {
+                            single | BitBoard::from(1 << (pos as usize + 16))
+                        } else {
+                            single
+                        }
+                    } else {
+                        BitBoard::from(0)
+                    }
+                };
+                let atks = self.get_white_pawn_atk(pos);
+                let mut moves = (quiet & !friendly & !enemy) | (atks & enemy);
+                if let Some(t) = config.get_en_passant_target() {
+                    if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
+                        moves |= BitBoard::from(1 << t as usize);
+                    }
+                }
+                Self::make_movelist(moves, pos, config)
+            }
+            BlackPawn => {
+                let friendly = config.black_occupancy();
+                let enemy = config.white_occupancy();
+                let quiet = {
+                    if pos > Square::A2 {
+                        // not in rank 1
+                        let single = BitBoard::from(1 << (pos as usize - 8)) & !friendly & !enemy;
+                        if pos >= Square::A7 && pos <= Square::H7 && single > BitBoard::from(0) {
+                            single | BitBoard::from(1 << (pos as usize - 16))
+                        } else {
+                            single
+                        }
+                    } else {
+                        BitBoard::from(0)
+                    }
+                };
+                let atks = self.get_black_pawn_atk(pos);
+                let mut moves = (quiet & !friendly & !enemy) | (atks & enemy);
+                if let Some(t) = config.get_en_passant_target() {
+                    if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
+                        moves |= BitBoard::from(1 << t as usize);
+                    }
+                }
+                Self::make_movelist(moves, pos, config)
+            }
+        }
+    }
+
+    fn is_sq_attacked(&self, sq: Square, color: Color, config: &BoardConfig) -> bool {
+        match color {
+            Color::White => {
+                if self.get_black_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::WhitePawn)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_knight_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::WhiteKnight)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_king_atk(sq) & config.get_piece_occupancy(BoardPiece::WhiteKing)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_bishop_atk(sq, config.all_occupancy())
+                    & (config.get_piece_occupancy(BoardPiece::WhiteBishop)
+                        | config.get_piece_occupancy(BoardPiece::WhiteQueen))
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_rook_atk(sq, config.all_occupancy())
+                    & (config.get_piece_occupancy(BoardPiece::WhiteRook)
+                        | config.get_piece_occupancy(BoardPiece::WhiteQueen))
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            Color::Black => {
+                if self.get_white_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::BlackPawn)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_knight_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::BlackKnight)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_king_atk(sq) & config.get_piece_occupancy(BoardPiece::BlackKing)
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_bishop_atk(sq, config.all_occupancy())
+                    & (config.get_piece_occupancy(BoardPiece::BlackBishop)
+                        | config.get_piece_occupancy(BoardPiece::BlackQueen))
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else if self.get_rook_atk(sq, config.all_occupancy())
+                    & (config.get_piece_occupancy(BoardPiece::BlackRook)
+                        | config.get_piece_occupancy(BoardPiece::BlackQueen))
+                    > BitBoard::from(0)
+                {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+
     fn get_rook_atk(&self, sq: Square, blockers: BitBoard) -> BitBoard {
         let magic = self.rook_magics[sq as usize];
         let moves = &self.rook_moves[sq as usize];
@@ -87,94 +308,12 @@ impl MoveGenerator {
         self.get_bishop_atk(sq, blockers) & !friendly
     }
 
-    // TODO: Quite moves for pawns and Casteling
-    pub fn gen_piece_moves(&self, piece: BoardPiece, pos: Square, config: &BoardConfig) -> BitBoard {
-        use BoardPiece::*;
-        match piece {
-            WhiteRook => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                self.get_rook_moves(pos, blockers, friendly)
-            }
-            BlackRook => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                self.get_rook_moves(pos, blockers, friendly)
-            }
-            WhiteBishop => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                self.get_bishop_moves(pos, blockers, friendly)
-            }
-            BlackBishop => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                self.get_bishop_moves(pos, blockers, friendly)
-            }
-            WhiteKnight => {
-                let friendly = config.white_occupancy();
-                self.get_knight_atk(pos) & !friendly
-            }
-            BlackKnight => {
-                let friendly = config.black_occupancy();
-                self.get_knight_atk(pos) & !friendly
-            }
-            WhiteKing => {
-                let friendly = config.white_occupancy();
-                self.get_king_atk(pos) & !friendly
-            }
-            BlackKing => {
-                let friendly = config.black_occupancy();
-                self.get_king_atk(pos) & !friendly
-            }
-            WhiteQueen => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                self.get_rook_moves(pos, blockers, friendly)
-                    | self.get_bishop_moves(pos, blockers, friendly)
-            }
-            BlackQueen => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                self.get_rook_moves(pos, blockers, friendly)
-                    | self.get_bishop_moves(pos, blockers, friendly)
-            }
-            WhitePawn => {
-                let friendly = config.white_occupancy();
-                let enemy = config.black_occupancy();
-                let quiet = {
-                    if pos < Square::H7 {
-                        // not in rank 8
-                        let single = BitBoard::from(1 << (pos as usize + 8)) & !friendly & !enemy;
-                        if pos >= Square::A2 && pos <= Square::H2 && single > BitBoard::from(0) {
-                            single | BitBoard::from(1 << (pos as usize + 16))
-                        } else {
-                            single
-                        }
-                    } else {
-                        BitBoard::from(0)
-                    }
-                };
-                (quiet & !friendly & !enemy) | (self.get_white_pawn_atk(pos) & enemy)
-            }
-            BlackPawn => {
-                let friendly = config.black_occupancy();
-                let enemy = config.white_occupancy();
-                let quiet = {
-                    if pos > Square::A2 {
-                        // not in rank 1
-                        let single = BitBoard::from(1 << (pos as usize - 8)) & !friendly & !enemy;
-                        if pos >= Square::A7 && pos <= Square::H7 && single > BitBoard::from(0) {
-                            single | BitBoard::from(1 << (pos as usize - 16))
-                        } else {
-                            single
-                        }
-                    } else {
-                        BitBoard::from(0)
-                    }
-                };
-                (quiet & !friendly & !enemy) | (self.get_black_pawn_atk(pos) & enemy)
-            }
+    fn make_movelist(mut moves: BitBoard, from: Square, c: &BoardConfig) -> MoveList {
+        let mut list = MoveList::new();
+        while moves.data() > 0 {
+            let to = moves.pop_sq().unwrap();
+            list.add(Move::infer(from, to, c));
         }
+        list
     }
 }

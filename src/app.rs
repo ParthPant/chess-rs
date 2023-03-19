@@ -1,5 +1,5 @@
 use crate::board::{events::BoardEvent, Board};
-use crate::data::{bitboard::BitBoard, BoardConfig};
+use crate::data::{BoardConfig, MoveList, Square};
 use crate::generator::MoveGenerator;
 use crate::ui::GuiFramework;
 
@@ -53,7 +53,8 @@ impl App {
             (pixels, framework)
         };
 
-        let mut moves = BitBoard::from(0);
+        let mut moves = MoveList::new();
+        let mut picked_sq: Option<Square> = None;
         event_loop.run(move |event, _, control_flow| {
             control_flow.set_poll();
 
@@ -99,14 +100,18 @@ impl App {
                     }
                 }
                 Event::MainEventsCleared => {
-                    if let Some((prev, new)) = board.get_user_move() {
-                        if moves.is_set(new) {
-                            config.borrow_mut().make_move(prev, new);
+                    if let Some(m) = board.get_user_move() {
+                        if moves.has_target_sq(m.to) {
+                            config.borrow_mut().make_move(&m);
                         }
                     }
-                    if let Some(sq) = board.get_picked_piece() {
-                        let p = config.borrow().get_at_sq(sq).unwrap();
-                        moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
+                    let sq = board.get_picked_piece();
+                    if sq != picked_sq {
+                        picked_sq = sq;
+                        if let Some(sq) = sq {
+                            let p = config.borrow().get_at_sq(sq).unwrap();
+                            moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
+                        }
                     }
                     window.request_redraw();
                 }
