@@ -310,7 +310,27 @@ impl MoveGenerator {
         let mut list = MoveList::new();
         while moves.data() > 0 {
             let to = moves.pop_sq().unwrap();
-            list.add(Move::infer(from, to, c));
+            let m = Move::infer(from, to, c);
+            if m.is_prom() {
+                let p = c.get_at_sq(from).unwrap();
+                use BoardPiece::*;
+                match p.get_color() {
+                    Color::White => {
+                        list.add(Move::new_prom(from, to, WhiteRook));
+                        list.add(Move::new_prom(from, to, WhiteBishop));
+                        list.add(Move::new_prom(from, to, WhiteKnight));
+                        list.add(Move::new_prom(from, to, WhiteQueen));
+                    }
+                    Color::Black => {
+                        list.add(Move::new_prom(from, to, BlackRook));
+                        list.add(Move::new_prom(from, to, BlackBishop));
+                        list.add(Move::new_prom(from, to, BlackKnight));
+                        list.add(Move::new_prom(from, to, BlackQueen));
+                    }
+                }
+            } else {
+                list.add(m);
+            }
         }
         list
     }
