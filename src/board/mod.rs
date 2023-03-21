@@ -1,7 +1,7 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::{piece::BoardPiece, BoardConfig, Move, MoveList, Square};
+use crate::data::{BoardConfig, BoardPiece, Move, MoveList, Square};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};

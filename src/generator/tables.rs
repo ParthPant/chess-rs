@@ -1,7 +1,4 @@
-use crate::data::{
-    bitboard::BitBoard,
-    piece::{BoardPiece, Color},
-};
+use crate::data::{BitBoard, BoardPiece, Color};
 use rand;
 
 pub const NOT_A_FILE: u64 = {

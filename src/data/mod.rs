@@ -4,23 +4,20 @@ mod moves;
 pub mod piece;
 mod square;
 
-use bitboard::BitBoard;
 use fen::Fen;
-pub use piece::{BoardPiece, Color};
-use std::{collections::HashMap, str::FromStr};
+use moves::CastleType;
+use std::str::FromStr;
 use strum::IntoEnumIterator;
 
+pub use bitboard::BitBoard;
 pub use moves::{Move, MoveCommit, MoveList, MoveType};
+pub use piece::{BoardPiece, Color};
 pub use square::Square;
 
-use self::moves::CastleType;
-
-pub type BoardMatrix = [[Option<BoardPiece>; 8]; 8];
-pub type BoardMap = HashMap<BoardPiece, BitBoard>;
+pub type BoardMap = [BitBoard; 12];
 
 #[derive(Debug, Clone)]
 pub struct BoardConfig {
-    board_mat: BoardMatrix,
     fen_str: String,
     active_color: Color,
     en_passant_target: Option<Square>,
@@ -35,10 +32,7 @@ pub struct BoardConfig {
 
 impl Default for BoardConfig {
     fn default() -> Self {
-        let mut c =
-            Fen::make_config_from_str("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        c.make_bitboards();
-        c
+        Fen::make_config_from_str("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
 }
 
@@ -176,14 +170,11 @@ impl BoardConfig {
     }
 
     pub fn from_fen_str(s: &str) -> Self {
-        let mut c = Fen::make_config_from_str(s);
-        c.make_bitboards();
-        c
+        Fen::make_config_from_str(s)
     }
 
     pub fn load_fen(&mut self, s: &str) {
         *self = Fen::make_config_from_str(s);
-        self.make_bitboards();
     }
 
     pub fn get_fen(&self) -> &str {
@@ -191,8 +182,12 @@ impl BoardConfig {
     }
 
     pub fn get_at_sq(&self, sq: Square) -> Option<BoardPiece> {
-        let (x, y) = sq.into();
-        self.board_mat[y][x]
+        for piece in BoardPiece::iter() {
+            if self.bitboards[piece as usize].is_set(sq) {
+                return Some(piece);
+            }
+        }
+        None
     }
 
     pub fn get_active_color(&self) -> Color {
@@ -229,20 +224,18 @@ impl BoardConfig {
 
     pub fn get_bit_board(&self, c: char) -> Option<BitBoard> {
         if let Ok(p) = BoardPiece::from_str(&c.to_string()) {
-            if let Some(b) = self.bitboards.get(&p) {
-                return Some(*b);
-            }
+            return Some(self.bitboards[p as usize]);
         }
         None
     }
 
     pub fn get_piece_occupancy(&self, p: BoardPiece) -> BitBoard {
-        *self.bitboards.get(&p).unwrap()
+        self.bitboards[p as usize]
     }
 
     pub fn all_occupancy(&self) -> BitBoard {
         let mut ret = BitBoard::from(0);
-        for (_p, bb) in self.bitboards.iter() {
+        for bb in self.bitboards.iter() {
             ret |= *bb;
         }
         ret
@@ -251,24 +244,24 @@ impl BoardConfig {
     pub fn white_occupancy(&self) -> BitBoard {
         let mut ret = BitBoard::from(0);
         use BoardPiece::*;
-        ret |= self.bitboards[&WhiteRook]
-            | self.bitboards[&WhiteBishop]
-            | self.bitboards[&WhiteKnight]
-            | self.bitboards[&WhiteKing]
-            | self.bitboards[&WhiteQueen]
-            | self.bitboards[&WhitePawn];
+        ret |= self.bitboards[WhiteRook as usize]
+            | self.bitboards[WhiteBishop as usize]
+            | self.bitboards[WhiteKnight as usize]
+            | self.bitboards[WhiteKing as usize]
+            | self.bitboards[WhiteQueen as usize]
+            | self.bitboards[WhitePawn as usize];
         ret
     }
 
     pub fn black_occupancy(&self) -> BitBoard {
         let mut ret = BitBoard::from(0);
         use BoardPiece::*;
-        ret |= self.bitboards[&BlackRook]
-            | self.bitboards[&BlackBishop]
-            | self.bitboards[&BlackKnight]
-            | self.bitboards[&BlackKing]
-            | self.bitboards[&BlackQueen]
-            | self.bitboards[&BlackPawn];
+        ret |= self.bitboards[BlackRook as usize]
+            | self.bitboards[BlackBishop as usize]
+            | self.bitboards[BlackKnight as usize]
+            | self.bitboards[BlackKing as usize]
+            | self.bitboards[BlackQueen as usize]
+            | self.bitboards[BlackPawn as usize];
         ret
     }
 
@@ -279,16 +272,12 @@ impl BoardConfig {
     }
 
     fn remove_piece(&mut self, from: Square) {
-        let loc: (usize, usize) = from.into();
-        if let Some(p) = self.board_mat[loc.1][loc.0] {
-            self.board_mat[loc.1][loc.0] = None;
+        if let Some(p) = self.get_at_sq(from) {
             self.remove_from_bitboard(p, from)
         }
     }
 
     fn add_piece(&mut self, p: BoardPiece, to: Square) {
-        let loc: (usize, usize) = to.into();
-        self.board_mat[loc.1][loc.0] = Some(p);
         self.add_to_bitboard(p, to)
     }
 
@@ -299,38 +288,15 @@ impl BoardConfig {
         }
     }
 
-    fn make_bitboards(&mut self) {
-        self.bitboards.clear();
-        for p in BoardPiece::iter() {
-            self.bitboards.entry(p).or_insert(BitBoard::from(0));
-        }
-        for y in 0..8 {
-            for x in 0..8 {
-                if let Some(p) = self.board_mat[y][x] {
-                    self.bitboards.entry(p).and_modify(|b| {
-                        b.set((x, y).try_into().unwrap());
-                    });
-                    log::debug!("add {} to bit {}", p, 8 * y + x);
-                }
-            }
-        }
-    }
-
     fn update_bitboard(&mut self, p: BoardPiece, prev: Square, new: Square) {
-        self.bitboards.entry(p).and_modify(|b| {
-            b.make_move(prev, new);
-        });
+        self.bitboards[p as usize].make_move(prev, new);
     }
 
     fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {
-        self.bitboards.entry(p).and_modify(|b| {
-            b.unset(pos);
-        });
+        self.bitboards[p as usize].unset(pos);
     }
 
     fn add_to_bitboard(&mut self, p: BoardPiece, pos: Square) {
-        self.bitboards.entry(p).and_modify(|b| {
-            b.set(pos);
-        });
+        self.bitboards[p as usize].set(pos);
     }
 }

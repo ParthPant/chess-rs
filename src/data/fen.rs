@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use std::str::FromStr;
+
+use crate::data::BoardMap;
 
 use super::piece::{BoardPiece, Color};
 use super::square::Square;
 use super::BoardConfig;
-use super::BoardMatrix;
 
 pub struct Fen;
 
@@ -101,7 +101,6 @@ impl Fen {
     // TODO: Return Result with custom error type
     fn make_config(fen_str: &str) -> BoardConfig {
         log::trace!("Making BoardConfig...");
-        let mut board_mat = BoardMatrix::default();
         let mut can_white_castle_queenside = false;
         let mut can_white_castle_kingside = false;
         let mut can_black_castle_queenside = false;
@@ -110,6 +109,7 @@ impl Fen {
         let mut halfmove_clock = 0;
         let mut fullmove_number = 0;
         let mut active_color = Color::White;
+        let mut bitboards: BoardMap = Default::default();
 
         for (i, data) in fen_str.split_whitespace().enumerate() {
             log::trace!("Parcing Fen field {}, {}", i, data);
@@ -122,7 +122,8 @@ impl Fen {
                                 x = x + c.to_digit(10).unwrap();
                             } else {
                                 log::debug!("Place {c} at {:?}", (7 - i, x));
-                                board_mat[7 - i][x as usize] = Some(Fen::get_piece_from_c(c));
+                                bitboards[Fen::get_piece_from_c(c) as usize]
+                                    .set(Square::try_from((x as usize, 7 - i)).unwrap());
                                 x = x + 1;
                             }
                         }
@@ -197,7 +198,6 @@ impl Fen {
 
         log::trace!("Done..");
         BoardConfig {
-            board_mat,
             fen_str: fen_str.to_string(),
             active_color,
             en_passant_target,
@@ -207,7 +207,7 @@ impl Fen {
             can_black_castle_queenside,
             halfmove_clock,
             fullmove_number,
-            bitboards: HashMap::default(),
+            bitboards,
         }
     }
 }

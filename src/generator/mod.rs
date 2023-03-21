@@ -1,10 +1,6 @@
 pub mod tables;
 
-use crate::data::{
-    bitboard::BitBoard,
-    piece::{BoardPiece, Color},
-    BoardConfig, Move, MoveList, Square,
-};
+use crate::data::{BitBoard, BoardConfig, BoardPiece, Color, Move, MoveList, Square};
 use tables::*;
 
 pub struct MoveGenerator {
