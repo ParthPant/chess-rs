@@ -40,20 +40,26 @@ impl Gui {
 
                 ui.separator();
 
-                ui.heading("Board Configuration");
-                ui.label(egui::RichText::new(config.get_fen()).size(10.0).monospace());
-                egui::CollapsingHeader::new("Edit").show(ui, |ui| {
-                    ui.add(egui::TextEdit::multiline(&mut self.fen));
-                    if ui.button("Load Fen").clicked() {
-                        config.load_fen(&self.fen);
+                ui.horizontal(|ui| {
+                    if ui.button("Reset").clicked() {
+                        config.reset();
+                    }
+
+                    if ui.button("Undo").clicked() {
+                        config.undo();
                     }
                 });
 
                 ui.separator();
 
-                if ui.button("Reset").clicked() {
-                    config.reset();
-                }
+                ui.heading("Board Configuration");
+                egui::CollapsingHeader::new("FEN").show(ui, |ui| {
+                    ui.label(egui::RichText::new(config.get_fen()).size(10.0).monospace());
+                    ui.add(egui::TextEdit::multiline(&mut self.fen));
+                    if ui.button("Load Fen").clicked() {
+                        config.load_fen(&self.fen);
+                    }
+                });
 
                 ui.separator();
 

@@ -44,8 +44,8 @@ impl Default for Board {
 }
 
 impl Board {
-    pub fn get_user_move(&mut self) -> &Option<Move> {
-        &self.user_move
+    pub fn get_user_move(&mut self) -> Option<Move> {
+        self.user_move
     }
 
     pub fn clear_user_move(&mut self) {

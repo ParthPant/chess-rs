@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::data::BoardMap;
+use crate::data::{BoardMap, CastleFlags};
 
 use super::piece::{BoardPiece, Color};
 use super::square::Square;
@@ -31,7 +31,9 @@ impl Fen {
             if empty > 0 {
                 s.push_str(&empty.to_string());
             }
-            s.push('/');
+            if y > 0 {
+                s.push('/');
+            }
         }
         match c.get_active_color() {
             Color::White => s.push_str(" w "),
@@ -101,10 +103,7 @@ impl Fen {
     // TODO: Return Result with custom error type
     fn make_config(fen_str: &str) -> BoardConfig {
         log::trace!("Making BoardConfig...");
-        let mut can_white_castle_queenside = false;
-        let mut can_white_castle_kingside = false;
-        let mut can_black_castle_queenside = false;
-        let mut can_black_castle_kingside = false;
+        let mut castle_flags = CastleFlags::default();
         let mut en_passant_target: Option<Square> = None;
         let mut halfmove_clock = 0;
         let mut fullmove_number = 0;
@@ -155,10 +154,10 @@ impl Fen {
                         let mut chars = data.chars();
                         while let Some(c) = chars.next() {
                             match c {
-                                'k' => can_black_castle_kingside = true,
-                                'q' => can_black_castle_queenside = true,
-                                'K' => can_white_castle_kingside = true,
-                                'Q' => can_white_castle_queenside = true,
+                                'k' => castle_flags.set_black_oo(),
+                                'q' => castle_flags.set_black_ooo(),
+                                'K' => castle_flags.set_white_oo(),
+                                'Q' => castle_flags.set_white_ooo(),
                                 _ => {
                                     log::error!("Fen Error: {} is invalid", c);
                                     panic!();
@@ -198,16 +197,13 @@ impl Fen {
 
         log::trace!("Done..");
         BoardConfig {
-            fen_str: fen_str.to_string(),
             active_color,
             en_passant_target,
-            can_white_castle_kingside,
-            can_white_castle_queenside,
-            can_black_castle_kingside,
-            can_black_castle_queenside,
+            castle_flags,
             halfmove_clock,
             fullmove_number,
             bitboards,
+            move_history: Default::default(),
         }
     }
 }

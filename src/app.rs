@@ -109,9 +109,9 @@ impl App {
                                     user_move.to,
                                     BoardPiece::WhiteKnight,
                                 );
-                                config.borrow_mut().apply_move(&m);
+                                config.borrow_mut().apply_move(m);
                             } else {
-                                config.borrow_mut().apply_move(&user_move);
+                                config.borrow_mut().apply_move(user_move);
                             }
                         }
                         board.clear_user_move();

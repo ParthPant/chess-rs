@@ -1,6 +1,6 @@
 use super::piece::BoardPiece;
 use super::square::Square;
-use super::BoardConfig;
+use super::{BoardConfig, CastleFlags};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -9,7 +9,7 @@ pub enum CastleType {
     QueenSide,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum MoveType {
     Normal,
     DoublePush,
@@ -18,7 +18,7 @@ pub enum MoveType {
     Promotion(Option<BoardPiece>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Move {
     pub from: Square,
     pub to: Square,
@@ -107,10 +107,65 @@ impl Move {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct MoveCommit {
     pub m: Move,
-    pub moved_piece: Option<BoardPiece>,
     pub captured: Option<BoardPiece>,
+    pub ep_target: Option<Square>,
+    pub castledelta: CastleFlags,
+}
+
+impl MoveCommit {
+    pub fn new(
+        m: Move,
+        captured: Option<BoardPiece>,
+        ep_target: Option<Square>,
+        castledelta: CastleFlags,
+    ) -> Self {
+        Self {
+            m,
+            captured,
+            ep_target,
+            castledelta,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MoveHistory {
+    list: Box<[Option<MoveCommit>; 255]>,
+    counter: usize,
+    capacity: usize,
+}
+
+impl Default for MoveHistory {
+    fn default() -> Self {
+        MoveHistory {
+            list: Box::new([None; 255]),
+            counter: 0,
+            capacity: 255,
+        }
+    }
+}
+
+impl MoveHistory {
+    pub fn push(&mut self, m: MoveCommit) {
+        if self.counter == self.capacity {
+            log::error!("MoveHistory is out of capacity");
+            panic!();
+        }
+        self.counter += 1;
+        self.list[self.counter] = Some(m);
+    }
+
+    pub fn pop(&mut self) -> Option<MoveCommit> {
+        let r = self.list[self.counter];
+        self.list[self.counter] = None;
+        if self.counter > 0 {
+            self.counter -= 1;
+        }
+        r
+    }
 }
 
 pub struct MoveList(Vec<Move>);

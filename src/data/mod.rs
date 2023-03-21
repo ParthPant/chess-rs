@@ -10,24 +10,21 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 pub use bitboard::BitBoard;
-pub use moves::{Move, MoveCommit, MoveList, MoveType};
+pub use moves::{Move, MoveCommit, MoveHistory, MoveList, MoveType};
 pub use piece::{BoardPiece, Color};
 pub use square::Square;
 
 pub type BoardMap = [BitBoard; 12];
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BoardConfig {
-    fen_str: String,
     active_color: Color,
     en_passant_target: Option<Square>,
-    can_white_castle_queenside: bool,
-    can_white_castle_kingside: bool,
-    can_black_castle_queenside: bool,
-    can_black_castle_kingside: bool,
+    castle_flags: CastleFlags,
     halfmove_clock: u32,
     fullmove_number: u32,
     pub bitboards: BoardMap,
+    move_history: MoveHistory,
 }
 
 impl Default for BoardConfig {
@@ -37,7 +34,7 @@ impl Default for BoardConfig {
 }
 
 impl BoardConfig {
-    pub fn apply_move(&mut self, m: &Move) {
+    pub fn apply_move(&mut self, m: Move) {
         log::info!("{:?}", m);
         let p = self.get_at_sq(m.from).unwrap();
         let pcolor = p.get_color();
@@ -47,21 +44,24 @@ impl BoardConfig {
             return;
         }
 
+        let prev_ep_target = self.en_passant_target;
+        let prev_castle_flags = self.castle_flags;
+
         use MoveType::*;
-        match m.move_type {
+        let cap = match m.move_type {
             Normal => self.apply_normal(m.from, m.to),
             DoublePush => self.apply_double_push(m.from, m.to, p),
             EnPassant => self.apply_en_passant(m.from, m.to, p),
             Castle(castle_type) => self.apply_castle(p, castle_type),
             Promotion(prom) => {
                 if let Some(prom) = prom {
-                    self.apply_promotion(m.from, m.to, prom);
+                    self.apply_promotion(m.from, m.to, prom)
                 } else {
                     log::error!("Promotion Move has no promotion piece assigned to it");
                     panic!();
                 }
             }
-        }
+        };
 
         // en passant state update
         if m.move_type != DoublePush {
@@ -70,38 +70,46 @@ impl BoardConfig {
         // castling state update
         if p == BoardPiece::WhiteRook {
             if m.from == Square::A1 {
-                self.can_white_castle_queenside = false;
+                self.castle_flags.unset_white_ooo();
             } else if m.from == Square::H1 {
-                self.can_white_castle_kingside = false;
+                self.castle_flags.unset_white_oo();
             }
         } else if p == BoardPiece::BlackRook {
             if m.from == Square::A8 {
-                self.can_black_castle_queenside = false;
+                self.castle_flags.unset_black_ooo();
             } else if m.from == Square::H8 {
-                self.can_black_castle_kingside = false;
+                self.castle_flags.unset_black_oo();
             }
         } else if p == BoardPiece::WhiteKing {
-            self.can_white_castle_kingside = false;
-            self.can_white_castle_queenside = false;
+            self.castle_flags.unset_white_oo();
+            self.castle_flags.unset_white_ooo();
         } else if p == BoardPiece::BlackKing {
-            self.can_black_castle_kingside = false;
-            self.can_black_castle_queenside = false;
+            self.castle_flags.unset_black_oo();
+            self.castle_flags.unset_black_ooo();
         }
 
         if pcolor == Color::Black {
             self.fullmove_number += 1;
         }
+        let castledelta = self.castle_flags.0 ^ prev_castle_flags.0;
         self.halfmove_clock += 1;
         self.toggle_active_color();
-        self.fen_str = Fen::make_fen_from_config(self);
+        // self.fen_str = Fen::make_fen_from_config(self);
+        self.move_history.push(MoveCommit::new(
+            m,
+            cap,
+            prev_ep_target,
+            CastleFlags(castledelta),
+        ));
     }
 
-    fn apply_normal(&mut self, from: Square, to: Square) {
-        self.remove_piece(to);
+    fn apply_normal(&mut self, from: Square, to: Square) -> Option<BoardPiece> {
+        let cap = self.remove_piece(to);
         self.move_piece(from, to);
+        cap
     }
 
-    fn apply_double_push(&mut self, from: Square, to: Square, p: BoardPiece) {
+    fn apply_double_push(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
         let pcolor = p.get_color();
         self.remove_piece(to);
         self.move_piece(from, to);
@@ -110,20 +118,21 @@ impl BoardConfig {
         } else {
             self.en_passant_target = Some(Square::try_from(to as usize + 8).unwrap());
         }
+        None
     }
 
-    fn apply_en_passant(&mut self, from: Square, to: Square, p: BoardPiece) {
+    fn apply_en_passant(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
         let pcolor = p.get_color();
-        self.remove_piece(to);
+        // self.remove_piece(to);
         self.move_piece(from, to);
         if pcolor == Color::White {
-            self.remove_piece(Square::try_from(to as usize - 8).unwrap());
+            self.remove_piece(Square::try_from(to as usize - 8).unwrap())
         } else {
-            self.remove_piece(Square::try_from(to as usize + 8).unwrap());
+            self.remove_piece(Square::try_from(to as usize + 8).unwrap())
         }
     }
 
-    fn apply_castle(&mut self, p: BoardPiece, castle_type: CastleType) {
+    fn apply_castle(&mut self, p: BoardPiece, castle_type: CastleType) -> Option<BoardPiece> {
         let pcolor = p.get_color();
         match castle_type {
             CastleType::KingSide => {
@@ -150,19 +159,127 @@ impl BoardConfig {
 
         match pcolor {
             Color::White => {
-                self.can_white_castle_kingside = false;
-                self.can_white_castle_queenside = false;
+                self.castle_flags.unset_white_oo();
+                self.castle_flags.unset_white_ooo();
             }
             Color::Black => {
-                self.can_black_castle_kingside = false;
-                self.can_black_castle_queenside = false;
+                self.castle_flags.unset_black_oo();
+                self.castle_flags.unset_black_ooo();
             }
+        }
+
+        None
+    }
+
+    fn apply_promotion(
+        &mut self,
+        from: Square,
+        to: Square,
+        prom: BoardPiece,
+    ) -> Option<BoardPiece> {
+        self.remove_piece(from);
+        let cap = self.get_at_sq(to);
+        self.add_piece(prom, to);
+        cap
+    }
+
+    pub fn undo(&mut self) {
+        if let Some(commit) = self.move_history.pop() {
+            let m = commit.m;
+            let cap = commit.captured;
+            let p = self.get_at_sq(m.to).unwrap();
+            let pcolor = p.get_color();
+
+            use MoveType::*;
+            match m.move_type {
+                Normal => self.undo_normal(m.from, m.to, cap),
+                DoublePush => self.undo_double_push(m.from, m.to),
+                EnPassant => self.undo_en_passant(m.from, m.to, p, cap),
+                Castle(castle_type) => self.undo_castle(p, castle_type),
+                Promotion(prom) => {
+                    if let Some(_) = prom {
+                        self.undo_promotion(m.from, m.to, p, cap);
+                    } else {
+                        log::error!("Promotion Move has no promotion piece assigned to it");
+                        panic!();
+                    }
+                }
+            }
+
+            if pcolor == Color::Black {
+                self.fullmove_number -= 1;
+            }
+            self.en_passant_target = commit.ep_target;
+            self.castle_flags.0 ^= commit.castledelta.0;
+            self.halfmove_clock -= 1;
+            self.toggle_active_color();
+            // self.fen_str = Fen::make_fen_from_config(self);
         }
     }
 
-    fn apply_promotion(&mut self, from: Square, to: Square, prom: BoardPiece) {
-        self.remove_piece(from);
-        self.add_piece(prom, to);
+    fn undo_normal(&mut self, from: Square, to: Square, cap: Option<BoardPiece>) {
+        self.move_piece(to, from);
+        if let Some(cap) = cap {
+            self.add_piece(cap, to);
+        }
+    }
+
+    fn undo_double_push(&mut self, from: Square, to: Square) {
+        self.move_piece(to, from);
+    }
+
+    fn undo_castle(&mut self, p: BoardPiece, castle_type: CastleType) {
+        match p.get_color() {
+            Color::White => match castle_type {
+                CastleType::KingSide => {
+                    self.move_piece(Square::G1, Square::E1);
+                    self.move_piece(Square::F1, Square::H1);
+                }
+                CastleType::QueenSide => {
+                    self.move_piece(Square::C1, Square::E1);
+                    self.move_piece(Square::D1, Square::A1);
+                }
+            },
+            Color::Black => match castle_type {
+                CastleType::KingSide => {
+                    self.move_piece(Square::G8, Square::E8);
+                    self.move_piece(Square::F8, Square::H8);
+                }
+                CastleType::QueenSide => {
+                    self.move_piece(Square::C8, Square::E8);
+                    self.move_piece(Square::D8, Square::A8);
+                }
+            },
+        }
+    }
+
+    fn undo_promotion(&mut self, from: Square, to: Square, p: BoardPiece, cap: Option<BoardPiece>) {
+        self.remove_piece(to);
+        match p.get_color() {
+            Color::White => self.add_piece(BoardPiece::WhitePawn, from),
+            Color::Black => self.add_piece(BoardPiece::BlackPawn, from),
+        }
+        if let Some(cap) = cap {
+            self.add_piece(cap, to);
+        }
+    }
+
+    fn undo_en_passant(
+        &mut self,
+        from: Square,
+        to: Square,
+        p: BoardPiece,
+        cap: Option<BoardPiece>,
+    ) {
+        self.move_piece(to, from);
+        if let Some(cap) = cap {
+            let cap_sq = if p.get_color() == Color::White {
+                Square::try_from(to as usize - 8).unwrap()
+            } else {
+                Square::try_from(to as usize + 8).unwrap()
+            };
+            self.add_piece(cap, cap_sq);
+        }
     }
 
     pub fn reset(&mut self) {
@@ -177,8 +294,8 @@ impl BoardConfig {
         *self = Fen::make_config_from_str(s);
     }
 
-    pub fn get_fen(&self) -> &str {
-        &self.fen_str
+    pub fn get_fen(&self) -> String {
+        Fen::make_fen_from_config(self)
     }
 
     pub fn get_at_sq(&self, sq: Square) -> Option<BoardPiece> {
@@ -195,19 +312,19 @@ impl BoardConfig {
     }
 
     pub fn get_can_white_castle_queenside(&self) -> bool {
-        self.can_white_castle_queenside
+        self.castle_flags.can_white_ooo()
     }
 
     pub fn get_can_white_castle_kingside(&self) -> bool {
-        self.can_white_castle_kingside
+        self.castle_flags.can_white_oo()
     }
 
     pub fn get_can_black_castle_queenside(&self) -> bool {
-        self.can_black_castle_queenside
+        self.castle_flags.can_black_ooo()
     }
 
     pub fn get_can_black_castle_kingside(&self) -> bool {
-        self.can_black_castle_kingside
+        self.castle_flags.can_black_oo()
     }
 
     pub fn get_en_passant_target(&self) -> Option<Square> {
@@ -271,9 +388,12 @@ impl BoardConfig {
         self.add_piece(p, to);
     }
 
-    fn remove_piece(&mut self, from: Square) {
+    fn remove_piece(&mut self, from: Square) -> Option<BoardPiece> {
         if let Some(p) = self.get_at_sq(from) {
-            self.remove_from_bitboard(p, from)
+            self.remove_from_bitboard(p, from);
+            Some(p)
+        } else {
+            None
         }
     }
 
@@ -298,5 +418,58 @@ impl BoardConfig {
 
     fn add_to_bitboard(&mut self, p: BoardPiece, pos: Square) {
         self.bitboards[p as usize].set(pos);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct CastleFlags(u8);
+
+impl CastleFlags {
+    pub fn can_white_oo(&self) -> bool {
+        self.0 & 1 > 0
+    }
+
+    pub fn set_white_oo(&mut self) {
+        self.0 |= 1;
+    }
+
+    pub fn unset_white_oo(&mut self) {
+        self.0 &= !(1);
+    }
+
+    pub fn can_white_ooo(&self) -> bool {
+        self.0 & (1 << 1) > 0
+    }
+
+    pub fn set_white_ooo(&mut self) {
+        self.0 |= 1 << 1;
+    }
+
+    pub fn unset_white_ooo(&mut self) {
+        self.0 &= !(1 << 1);
+    }
+
+    pub fn can_black_oo(&self) -> bool {
+        self.0 & (1 << 2) > 0
+    }
+
+    pub fn set_black_oo(&mut self) {
+        self.0 |= 1 << 2;
+    }
+
+    pub fn unset_black_oo(&mut self) {
+        self.0 &= !(1 << 2);
+    }
+
+    pub fn can_black_ooo(&self) -> bool {
+        self.0 & (1 << 3) > 0
+    }
+
+    pub fn set_black_ooo(&mut self) {
+        self.0 |= 1 << 3;
+    }
+
+    pub fn unset_black_ooo(&mut self) {
+        self.0 &= !(1 << 3);
     }
 }
