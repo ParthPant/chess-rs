@@ -7,6 +7,7 @@ use log;
 use pixels::{Error, Pixels, SurfaceTexture};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Instant;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -121,14 +122,22 @@ impl App {
                         picked_sq = sq;
                         if let Some(sq) = sq {
                             let p = config.borrow().get_at_sq(sq).unwrap();
+                            let start = Instant::now();
                             moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
+                            let duration = start.elapsed();
+                            log::debug!("Generated {} moves in {:?}", moves.len(), duration)
                         }
                     }
                     window.request_redraw();
                 }
                 Event::RedrawRequested(_) => {
                     // Redraw here
-                    board.draw(pixels.get_frame_mut(), &(*config).borrow(), &moves);
+                    board.draw(
+                        pixels.get_frame_mut(),
+                        &generator,
+                        &(*config).borrow(),
+                        &moves,
+                    );
                     // Prepare egui
                     framework.prepare(&window);
                     // Render everything together

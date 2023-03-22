@@ -38,6 +38,16 @@ impl BitBoard {
             Some(sq)
         }
     }
+
+    pub fn peek(&self) -> Option<Square> {
+        let tzs = self.0.trailing_zeros();
+        if tzs >= 64 {
+            None
+        } else {
+            let sq: Square = (tzs as usize).try_into().unwrap();
+            Some(sq)
+        }
+    }
 }
 
 impl PartialEq<u64> for BitBoard {

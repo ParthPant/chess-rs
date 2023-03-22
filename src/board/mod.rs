@@ -2,6 +2,7 @@ pub mod events;
 
 use crate::cache::Cache;
 use crate::data::{BoardConfig, BoardPiece, Move, MoveList, Square};
+use crate::generator::MoveGenerator;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};
@@ -13,6 +14,7 @@ pub struct Board {
     black_color: [u8; 4],
     ruler_color: [u8; 4],
     highlight_color: [u8; 4],
+    red_highlight_color: [u8; 4],
     font: fontdue::Font,
     glyph_cache: Cache<usvg::Tree>,
     raster_cache: Cache<tiny_skia::Pixmap>,
@@ -33,6 +35,7 @@ impl Default for Board {
             black_color: [0xb8, 0x8b, 0x4a, 0xff],
             ruler_color: [0xff, 0xff, 0xff, 0xff],
             highlight_color: [0x3f, 0x7a, 0xd9, 0x40],
+            red_highlight_color: [0xff, 0x20, 0x20, 0xff],
             font,
             glyph_cache: Cache::default(),
             raster_cache: Cache::default(),
@@ -83,7 +86,13 @@ impl Board {
         }
     }
 
-    pub fn draw(&mut self, frame: &mut [u8], config: &BoardConfig, moves: &MoveList) {
+    pub fn draw(
+        &mut self,
+        frame: &mut [u8],
+        gen: &MoveGenerator,
+        config: &BoardConfig,
+        moves: &MoveList,
+    ) {
         let size = self.get_draw_area_side();
         let mut pixmap = tiny_skia::Pixmap::new(size, size).unwrap();
 
@@ -117,6 +126,14 @@ impl Board {
             self.highlight_color[1],
             self.highlight_color[2],
             self.highlight_color[3],
+        );
+
+        let mut red_highlight_paint = tiny_skia::Paint::default();
+        red_highlight_paint.set_color_rgba8(
+            self.red_highlight_color[0],
+            self.red_highlight_color[1],
+            self.red_highlight_color[2],
+            self.red_highlight_color[3],
         );
 
         let check_side = self.get_check_side();
@@ -199,6 +216,11 @@ impl Board {
                 }
 
                 if let Some(p) = config.get_at_sq((x, y).try_into().unwrap()).to_owned() {
+                    if (p == BoardPiece::WhiteKing || p == BoardPiece::BlackKing)
+                        && config.is_king_in_check(gen, p.get_color())
+                    {
+                        pixmap.fill_rect(rect, &red_highlight_paint, t, None);
+                    }
                     let tree = self.get_glyph_tree(&p);
                     let transform = tiny_skia::Transform::from_translate(
                         // TODO: Fix magic number

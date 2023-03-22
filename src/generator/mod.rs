@@ -54,54 +54,55 @@ impl MoveGenerator {
         config: &BoardConfig,
     ) -> MoveList {
         use BoardPiece::*;
+        let mut config = config.clone();
         match piece {
             WhiteRook => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
                 let moves = self.get_rook_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackRook => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
                 let moves = self.get_rook_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             WhiteBishop => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
                 let moves = self.get_bishop_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackBishop => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
                 let moves = self.get_bishop_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             WhiteKnight => {
                 let friendly = config.white_occupancy();
                 let moves = self.get_knight_atk(pos) & !friendly;
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackKnight => {
                 let friendly = config.black_occupancy();
                 let moves = self.get_knight_atk(pos) & !friendly;
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             WhiteQueen => {
                 let blockers = config.all_occupancy();
                 let friendly = config.white_occupancy();
                 let moves = self.get_rook_moves(pos, blockers, friendly)
                     | self.get_bishop_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackQueen => {
                 let blockers = config.all_occupancy();
                 let friendly = config.black_occupancy();
                 let moves = self.get_rook_moves(pos, blockers, friendly)
                     | self.get_bishop_moves(pos, blockers, friendly);
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             WhiteKing => {
                 let friendly = config.white_occupancy();
@@ -109,19 +110,19 @@ impl MoveGenerator {
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if config.get_can_white_castle_kingside() {
                     if !(all.is_set(Square::F1) || all.is_set(Square::G1))
-                        && !self.is_sq_attacked(Square::F1, Color::Black, config)
+                        && !self.is_sq_attacked(Square::F1, Color::Black, &mut config)
                     {
                         moves.set(Square::G1);
                     }
                 }
                 if config.get_can_white_castle_queenside() {
                     if !(all.is_set(Square::B1) || all.is_set(Square::C1) || all.is_set(Square::D1))
-                        && !self.is_sq_attacked(Square::D1, Color::Black, config)
+                        && !self.is_sq_attacked(Square::D1, Color::Black, &mut config)
                     {
                         moves.set(Square::C1);
                     }
                 }
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackKing => {
                 let friendly = config.black_occupancy();
@@ -129,19 +130,19 @@ impl MoveGenerator {
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if config.get_can_black_castle_kingside() {
                     if !(all.is_set(Square::F8) || all.is_set(Square::G8))
-                        && !self.is_sq_attacked(Square::F8, Color::White, config)
+                        && !self.is_sq_attacked(Square::F8, Color::White, &mut config)
                     {
                         moves.set(Square::G8);
                     }
                 }
                 if config.get_can_black_castle_queenside() {
                     if !(all.is_set(Square::B8) || all.is_set(Square::C8) || all.is_set(Square::D8))
-                        && !self.is_sq_attacked(Square::D8, Color::White, config)
+                        && !self.is_sq_attacked(Square::D8, Color::White, &mut config)
                     {
                         moves.set(Square::C8);
                     }
                 }
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             // TODO: Pawn Promotion
             WhitePawn => {
@@ -167,7 +168,7 @@ impl MoveGenerator {
                         moves |= BitBoard::from(1 << t as usize);
                     }
                 }
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
             BlackPawn => {
                 let friendly = config.black_occupancy();
@@ -192,12 +193,12 @@ impl MoveGenerator {
                         moves |= BitBoard::from(1 << t as usize);
                     }
                 }
-                Self::make_movelist(moves, pos, config)
+                self.make_movelist(moves, pos, &mut config)
             }
         }
     }
 
-    fn is_sq_attacked(&self, sq: Square, color: Color, config: &BoardConfig) -> bool {
+    pub fn is_sq_attacked(&self, sq: Square, color: Color, config: &BoardConfig) -> bool {
         match color {
             Color::White => {
                 if self.get_black_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::WhitePawn)
@@ -302,30 +303,50 @@ impl MoveGenerator {
         self.get_bishop_atk(sq, blockers) & !friendly
     }
 
-    fn make_movelist(mut moves: BitBoard, from: Square, c: &BoardConfig) -> MoveList {
+    fn is_legal(&self, m: Move, c: &mut BoardConfig, side: Color) -> bool {
+        if let Some(commit) = c.make_move(m) {
+            let king_sq = match side {
+                Color::White => c.bitboards[BoardPiece::WhiteKing as usize].peek().unwrap(),
+                Color::Black => c.bitboards[BoardPiece::BlackKing as usize].peek().unwrap(),
+            };
+            let res = !self.is_sq_attacked(king_sq, !side, c);
+            c.undo_commit(&commit);
+            return res;
+        }
+        false
+    }
+
+    fn make_movelist(&self, mut moves: BitBoard, from: Square, c: &mut BoardConfig) -> MoveList {
         let mut list = MoveList::new();
         while moves.data() > 0 {
             let to = moves.pop_sq().unwrap();
             let m = Move::infer(from, to, c);
+            let p = c.get_at_sq(from).unwrap();
             if m.is_prom() {
-                let p = c.get_at_sq(from).unwrap();
                 use BoardPiece::*;
                 match p.get_color() {
                     Color::White => {
-                        list.add(Move::new_prom(from, to, WhiteRook));
-                        list.add(Move::new_prom(from, to, WhiteBishop));
-                        list.add(Move::new_prom(from, to, WhiteKnight));
-                        list.add(Move::new_prom(from, to, WhiteQueen));
+                        let m = Move::new_prom(from, to, WhiteRook);
+                        if self.is_legal(m, c, p.get_color()) {
+                            list.add(m);
+                            list.add(Move::new_prom(from, to, WhiteBishop));
+                            list.add(Move::new_prom(from, to, WhiteKnight));
+                            list.add(Move::new_prom(from, to, WhiteQueen));
+                        }
                     }
                     Color::Black => {
-                        list.add(Move::new_prom(from, to, BlackRook));
-                        list.add(Move::new_prom(from, to, BlackBishop));
-                        list.add(Move::new_prom(from, to, BlackKnight));
-                        list.add(Move::new_prom(from, to, BlackQueen));
+                        let m = Move::new_prom(from, to, BlackRook);
+                        if self.is_legal(m, c, p.get_color()) {
+                            list.add(Move::new_prom(from, to, BlackBishop));
+                            list.add(Move::new_prom(from, to, BlackKnight));
+                            list.add(Move::new_prom(from, to, BlackQueen));
+                        }
                     }
                 }
             } else {
-                list.add(m);
+                if self.is_legal(m, c, p.get_color()) {
+                    list.add(m);
+                }
             }
         }
         list

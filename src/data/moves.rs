@@ -1,6 +1,6 @@
 use super::piece::BoardPiece;
 use super::square::Square;
-use super::{BoardConfig, CastleFlags};
+use super::{BoardConfig, CastleFlags, Color};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -131,7 +131,7 @@ impl MoveCommit {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MoveHistory {
     list: Box<[Option<MoveCommit>; 255]>,
     counter: usize,
@@ -181,5 +181,9 @@ impl MoveList {
 
     pub fn has_target_sq(&self, sq: Square) -> bool {
         self.0.iter().any(|x| x.to == sq)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }

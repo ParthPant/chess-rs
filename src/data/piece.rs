@@ -1,9 +1,22 @@
+use std::ops::Not;
 use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display)]
 pub enum Color {
     White,
     Black,
+}
+
+impl Not for Color {
+    type Output = Self;
+
+    fn not(self) -> Self {
+        use Color::*;
+        match self {
+            White => Black,
+            Black => White,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display, EnumString, EnumIter)]

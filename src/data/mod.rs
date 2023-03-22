@@ -4,6 +4,7 @@ mod moves;
 pub mod piece;
 mod square;
 
+use crate::generator::MoveGenerator;
 use fen::Fen;
 use moves::CastleType;
 use std::str::FromStr;
@@ -16,7 +17,7 @@ pub use square::Square;
 
 pub type BoardMap = [BitBoard; 12];
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BoardConfig {
     active_color: Color,
     en_passant_target: Option<Square>,
@@ -36,12 +37,29 @@ impl Default for BoardConfig {
 impl BoardConfig {
     pub fn apply_move(&mut self, m: Move) {
         log::info!("{:?}", m);
+        if let Some(commit) = self.make_move(m) {
+            self.move_history.push(commit);
+        }
+    }
+
+    pub fn is_king_in_check(&self, gen: &MoveGenerator, side: Color) -> bool {
+        let sq = match side {
+            Color::White => self.bitboards[BoardPiece::WhiteKing as usize].peek(),
+            Color::Black => self.bitboards[BoardPiece::BlackKing as usize].peek(),
+        };
+        if let Some(sq) = sq {
+            return gen.is_sq_attacked(sq, !side, &self);
+        }
+        false
+    }
+
+    pub fn make_move(&mut self, m: Move) -> Option<MoveCommit> {
         let p = self.get_at_sq(m.from).unwrap();
         let pcolor = p.get_color();
 
         // prevent from moving when its not their turn
         if pcolor != self.active_color {
-            return;
+            return None;
         }
 
         let prev_ep_target = self.en_passant_target;
@@ -49,13 +67,13 @@ impl BoardConfig {
 
         use MoveType::*;
         let cap = match m.move_type {
-            Normal => self.apply_normal(m.from, m.to),
-            DoublePush => self.apply_double_push(m.from, m.to, p),
-            EnPassant => self.apply_en_passant(m.from, m.to, p),
-            Castle(castle_type) => self.apply_castle(p, castle_type),
+            Normal => self.make_normal(m.from, m.to),
+            DoublePush => self.make_double_push(m.from, m.to, p),
+            EnPassant => self.make_en_passant(m.from, m.to, p),
+            Castle(castle_type) => self.make_castle(p, castle_type),
             Promotion(prom) => {
                 if let Some(prom) = prom {
-                    self.apply_promotion(m.from, m.to, prom)
+                    self.make_promotion(m.from, m.to, prom)
                 } else {
                     log::error!("Promotion Move has no promotion piece assigned to it");
                     panic!();
@@ -69,15 +87,15 @@ impl BoardConfig {
         }
         // castling state update
         if p == BoardPiece::WhiteRook {
-            if m.from == Square::A1 {
+            if m.from == Square::A1 || m.to == Square::A1 {
                 self.castle_flags.unset_white_ooo();
-            } else if m.from == Square::H1 {
+            } else if m.from == Square::H1 || m.to == Square::H1 {
                 self.castle_flags.unset_white_oo();
             }
         } else if p == BoardPiece::BlackRook {
-            if m.from == Square::A8 {
+            if m.from == Square::A8 || m.to == Square::A8 {
                 self.castle_flags.unset_black_ooo();
-            } else if m.from == Square::H8 {
+            } else if m.from == Square::H8 || m.to == Square::H8 {
                 self.castle_flags.unset_black_oo();
             }
         } else if p == BoardPiece::WhiteKing {
@@ -94,22 +112,21 @@ impl BoardConfig {
         let castledelta = self.castle_flags.0 ^ prev_castle_flags.0;
         self.halfmove_clock += 1;
         self.toggle_active_color();
-        // self.fen_str = Fen::make_fen_from_config(self);
-        self.move_history.push(MoveCommit::new(
+        Some(MoveCommit::new(
             m,
             cap,
             prev_ep_target,
             CastleFlags(castledelta),
-        ));
+        ))
     }
 
-    fn apply_normal(&mut self, from: Square, to: Square) -> Option<BoardPiece> {
+    fn make_normal(&mut self, from: Square, to: Square) -> Option<BoardPiece> {
         let cap = self.remove_piece(to);
         self.move_piece(from, to);
         cap
     }
 
-    fn apply_double_push(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
+    fn make_double_push(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
         let pcolor = p.get_color();
         self.remove_piece(to);
         self.move_piece(from, to);
@@ -121,7 +138,7 @@ impl BoardConfig {
         None
     }
 
-    fn apply_en_passant(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
+    fn make_en_passant(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
         let pcolor = p.get_color();
         // self.remove_piece(to);
         self.move_piece(from, to);
@@ -132,7 +149,7 @@ impl BoardConfig {
         }
     }
 
-    fn apply_castle(&mut self, p: BoardPiece, castle_type: CastleType) -> Option<BoardPiece> {
+    fn make_castle(&mut self, p: BoardPiece, castle_type: CastleType) -> Option<BoardPiece> {
         let pcolor = p.get_color();
         match castle_type {
             CastleType::KingSide => {
@@ -171,12 +188,7 @@ impl BoardConfig {
         None
     }
 
-    fn apply_promotion(
-        &mut self,
-        from: Square,
-        to: Square,
-        prom: BoardPiece,
-    ) -> Option<BoardPiece> {
+    fn make_promotion(&mut self, from: Square, to: Square, prom: BoardPiece) -> Option<BoardPiece> {
         self.remove_piece(from);
         let cap = self.get_at_sq(to);
         self.add_piece(prom, to);
@@ -185,36 +197,39 @@ impl BoardConfig {
 
     pub fn undo(&mut self) {
         if let Some(commit) = self.move_history.pop() {
-            let m = commit.m;
-            let cap = commit.captured;
-            let p = self.get_at_sq(m.to).unwrap();
-            let pcolor = p.get_color();
+            self.undo_commit(&commit);
+        }
+    }
 
-            use MoveType::*;
-            match m.move_type {
-                Normal => self.undo_normal(m.from, m.to, cap),
-                DoublePush => self.undo_double_push(m.from, m.to),
-                EnPassant => self.undo_en_passant(m.from, m.to, p, cap),
-                Castle(castle_type) => self.undo_castle(p, castle_type),
-                Promotion(prom) => {
-                    if let Some(_) = prom {
-                        self.undo_promotion(m.from, m.to, p, cap);
-                    } else {
-                        log::error!("Promotion Move has no promotion piece assigned to it");
-                        panic!();
-                    }
+    pub fn undo_commit(&mut self, commit: &MoveCommit) {
+        let m = commit.m;
+        let cap = commit.captured;
+        let p = self.get_at_sq(m.to).unwrap();
+        let pcolor = p.get_color();
+
+        use MoveType::*;
+        match m.move_type {
+            Normal => self.undo_normal(m.from, m.to, cap),
+            DoublePush => self.undo_double_push(m.from, m.to),
+            EnPassant => self.undo_en_passant(m.from, m.to, p, cap),
+            Castle(castle_type) => self.undo_castle(p, castle_type),
+            Promotion(prom) => {
+                if let Some(_) = prom {
+                    self.undo_promotion(m.from, m.to, p, cap);
+                } else {
+                    log::error!("Promotion Move has no promotion piece assigned to it");
+                    panic!();
                 }
             }
-
-            if pcolor == Color::Black {
-                self.fullmove_number -= 1;
-            }
-            self.en_passant_target = commit.ep_target;
-            self.castle_flags.0 ^= commit.castledelta.0;
-            self.halfmove_clock -= 1;
-            self.toggle_active_color();
-            // self.fen_str = Fen::make_fen_from_config(self);
         }
+
+        if pcolor == Color::Black {
+            self.fullmove_number -= 1;
+        }
+        self.en_passant_target = commit.ep_target;
+        self.castle_flags.0 ^= commit.castledelta.0;
+        self.halfmove_clock -= 1;
+        self.toggle_active_color();
     }
 
     fn undo_normal(&mut self, from: Square, to: Square, cap: Option<BoardPiece>) {
