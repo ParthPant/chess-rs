@@ -12,7 +12,7 @@ use strum::IntoEnumIterator;
 
 pub use bitboard::BitBoard;
 pub use moves::{Move, MoveCommit, MoveHistory, MoveList, MoveType};
-pub use piece::{BoardPiece, Color};
+pub use piece::{BoardPiece, Color, B_PIECES, W_PIECES};
 pub use square::Square;
 
 pub type BoardMap = [BitBoard; 12];
@@ -35,9 +35,13 @@ impl Default for BoardConfig {
 }
 
 impl BoardConfig {
+    pub fn get_last_commit(&self) -> Option<MoveCommit> {
+        self.move_history.get_last()
+    }
+
     pub fn apply_move(&mut self, m: Move) {
         if let Some(commit) = self.make_move(m) {
-            log::info!("{}", commit);
+            log::info!("{:?}", commit);
             self.move_history.push(commit);
         }
     }
@@ -86,30 +90,28 @@ impl BoardConfig {
             self.en_passant_target = None;
         }
         // castling state update
-        if p == BoardPiece::WhiteRook {
-            if m.from == Square::A1 || m.to == Square::A1 {
-                self.castle_flags.unset_white_ooo();
-            } else if m.from == Square::H1 || m.to == Square::H1 {
-                self.castle_flags.unset_white_oo();
-            }
-        } else if p == BoardPiece::BlackRook {
-            if m.from == Square::A8 || m.to == Square::A8 {
-                self.castle_flags.unset_black_ooo();
-            } else if m.from == Square::H8 || m.to == Square::H8 {
-                self.castle_flags.unset_black_oo();
-            }
-        } else if p == BoardPiece::WhiteKing {
+        if m.from == Square::A1 || m.to == Square::A1 {
+            self.castle_flags.unset_white_ooo();
+        } else if m.from == Square::A8 || m.to == Square::A8 {
+            self.castle_flags.unset_black_oo();
+        } else if m.from == Square::H1 || m.to == Square::H1 {
+            self.castle_flags.unset_white_ooo();
+        } else if m.from == Square::H8 || m.to == Square::H8 {
+            self.castle_flags.unset_black_oo();
+        } else if pcolor == Color::Black {
+            self.fullmove_number += 1;
+        } else if m.from == Square::E1 || m.to == Square::E1 {
             self.castle_flags.unset_white_oo();
             self.castle_flags.unset_white_ooo();
-        } else if p == BoardPiece::BlackKing {
+        } else if m.from == Square::E8 || m.to == Square::E8 {
             self.castle_flags.unset_black_oo();
             self.castle_flags.unset_black_ooo();
         }
 
-        if pcolor == Color::Black {
+        let castledelta = self.castle_flags.0 ^ prev_castle_flags.0;
+        if self.active_color == Color::Black {
             self.fullmove_number += 1;
         }
-        let castledelta = self.castle_flags.0 ^ prev_castle_flags.0;
         self.halfmove_clock += 1;
         self.toggle_active_color();
         Some(MoveCommit::new(
@@ -191,7 +193,7 @@ impl BoardConfig {
 
     fn make_promotion(&mut self, from: Square, to: Square, prom: BoardPiece) -> Option<BoardPiece> {
         self.remove_piece(from);
-        let cap = self.get_at_sq(to);
+        let cap = self.remove_piece(to);
         self.add_piece(prom, to);
         cap
     }
@@ -418,14 +420,7 @@ impl BoardConfig {
     }
 
     fn toggle_active_color(&mut self) {
-        self.active_color = match self.active_color {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
-        }
-    }
-
-    fn update_bitboard(&mut self, p: BoardPiece, prev: Square, new: Square) {
-        self.bitboards[p as usize].make_move(prev, new);
+        self.active_color = !self.active_color;
     }
 
     fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {

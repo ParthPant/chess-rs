@@ -62,3 +62,27 @@ impl BoardPiece {
         }
     }
 }
+
+pub const W_PIECES: [BoardPiece; 6] = {
+    use BoardPiece::*;
+    [
+        WhiteKing,
+        WhitePawn,
+        WhiteRook,
+        WhiteQueen,
+        WhiteBishop,
+        WhiteKnight,
+    ]
+};
+
+pub const B_PIECES: [BoardPiece; 6] = {
+    use BoardPiece::*;
+    [
+        BlackKing,
+        BlackPawn,
+        BlackRook,
+        BlackQueen,
+        BlackBishop,
+        BlackKnight,
+    ]
+};

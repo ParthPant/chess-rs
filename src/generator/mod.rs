@@ -1,6 +1,8 @@
 pub mod tables;
 
-use crate::data::{BitBoard, BoardConfig, BoardPiece, Color, Move, MoveList, Square};
+use crate::data::{
+    BitBoard, BoardConfig, BoardPiece, Color, Move, MoveList, Square, B_PIECES, W_PIECES,
+};
 use tables::*;
 
 pub struct MoveGenerator {
@@ -47,6 +49,25 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
+    pub fn gen_all_moves(&self, side: Color, config: &BoardConfig) -> MoveList {
+        let pieces = match side {
+            Color::White => &W_PIECES,
+            Color::Black => &B_PIECES,
+        };
+
+        let mut moves = MoveList::new();
+        for p in pieces {
+            let mut bb = config.bitboards[*p as usize];
+            while bb.data() > 0 {
+                let pos = bb.pop_sq().unwrap();
+                let piece_moves = self.gen_piece_moves(*p, pos, config);
+                moves.append(piece_moves);
+            }
+        }
+
+        moves
+    }
+
     pub fn gen_piece_moves(
         &self,
         piece: BoardPiece,
@@ -148,11 +169,11 @@ impl MoveGenerator {
                 let friendly = config.white_occupancy();
                 let enemy = config.black_occupancy();
                 let quiet = {
-                    if pos < Square::H7 {
+                    if pos < Square::A8 {
                         // not in rank 8
                         let single = BitBoard::from(1 << (pos as usize + 8)) & !friendly & !enemy;
                         if pos >= Square::A2 && pos <= Square::H2 && single > BitBoard::from(0) {
-                            single | BitBoard::from(1 << (pos as usize + 16))
+                            (single | BitBoard::from(1 << (pos as usize + 16))) & !friendly & !enemy
                         } else {
                             single
                         }
@@ -161,7 +182,7 @@ impl MoveGenerator {
                     }
                 };
                 let atks = self.get_white_pawn_atk(pos);
-                let mut moves = (quiet & !friendly & !enemy) | (atks & enemy);
+                let mut moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
                     if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
                         moves |= BitBoard::from(1 << t as usize);
@@ -173,11 +194,11 @@ impl MoveGenerator {
                 let friendly = config.black_occupancy();
                 let enemy = config.white_occupancy();
                 let quiet = {
-                    if pos > Square::A2 {
+                    if pos > Square::H1 {
                         // not in rank 1
                         let single = BitBoard::from(1 << (pos as usize - 8)) & !friendly & !enemy;
                         if pos >= Square::A7 && pos <= Square::H7 && single > BitBoard::from(0) {
-                            single | BitBoard::from(1 << (pos as usize - 16))
+                            (single | BitBoard::from(1 << (pos as usize - 16))) & !friendly & !enemy
                         } else {
                             single
                         }
@@ -186,7 +207,7 @@ impl MoveGenerator {
                     }
                 };
                 let atks = self.get_black_pawn_atk(pos);
-                let mut moves = (quiet & !friendly & !enemy) | (atks & enemy);
+                let mut moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
                     if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
                         moves |= BitBoard::from(1 << t as usize);

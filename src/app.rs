@@ -1,5 +1,5 @@
 use crate::board::{events::BoardEvent, Board};
-use crate::data::{BoardConfig, BoardPiece, Move, MoveList, Square};
+use crate::data::{BoardConfig, MoveList, Square};
 use crate::generator::MoveGenerator;
 use crate::ui::GuiFramework;
 
@@ -31,7 +31,10 @@ impl App {
             .unwrap();
 
         let mut board = Board::default();
-        let config = Rc::new(RefCell::new(BoardConfig::default()));
+        // let config = Rc::new(RefCell::new(BoardConfig::default()));
+        let config = Rc::new(RefCell::new(BoardConfig::from_fen_str(
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+        )));
         let generator = MoveGenerator::default();
 
         let (mut pixels, mut framework) = {

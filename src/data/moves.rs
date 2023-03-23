@@ -25,6 +25,17 @@ pub struct Move {
     pub move_type: MoveType,
 }
 
+impl Display for Move {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        use MoveType::*;
+        if let Promotion(Some(p)) = self.move_type {
+            write!(f, "{}{}{}", self.from, self.to, p)
+        } else {
+            write!(f, "{}{}", self.from, self.to)
+        }
+    }
+}
+
 impl Move {
     pub fn new(from: Square, to: Square, m: MoveType) -> Self {
         Self {
@@ -70,8 +81,7 @@ impl Move {
                 if to == t {
                     m = EnPassant;
                 }
-            } else if to > Square::H7 {
-                // promotion
+            } else if to >= Square::A8 {
                 m = Promotion(None);
             }
         } else if p == BoardPiece::BlackPawn {
@@ -81,8 +91,7 @@ impl Move {
                 if to == t {
                     m = EnPassant;
                 }
-            } else if to < Square::A2 {
-                // promotion
+            } else if to <= Square::H1 {
                 m = Promotion(None)
             }
         }
@@ -195,13 +204,21 @@ impl MoveHistory {
         }
         r
     }
+
+    pub fn get_last(&self) -> Option<MoveCommit> {
+        self.list[self.counter]
+    }
 }
 
 pub struct MoveList(Vec<Move>);
 
 impl MoveList {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self(Vec::with_capacity(50))
+    }
+
+    pub fn append(&mut self, mut list: MoveList) {
+        self.0.append(&mut list.0);
     }
 
     pub fn add(&mut self, m: Move) {
@@ -214,5 +231,9 @@ impl MoveList {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Move> {
+        self.0.iter()
     }
 }
