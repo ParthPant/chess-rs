@@ -144,7 +144,6 @@ impl MoveGenerator {
                 }
                 self.make_movelist(moves, pos, &mut config)
             }
-            // TODO: Pawn Promotion
             WhitePawn => {
                 let friendly = config.white_occupancy();
                 let enemy = config.black_occupancy();

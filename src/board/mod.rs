@@ -1,11 +1,25 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::{BoardConfig, BoardPiece, Move, MoveList, Square};
+use crate::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
 use crate::generator::MoveGenerator;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue;
 use resvg::{tiny_skia, usvg};
+
+const W_PROM_OPTS: [BoardPiece; 4] = [
+    BoardPiece::WhiteKnight,
+    BoardPiece::WhiteBishop,
+    BoardPiece::WhiteRook,
+    BoardPiece::WhiteQueen,
+];
+
+const B_PROM_OPTS: [BoardPiece; 4] = [
+    BoardPiece::BlackKnight,
+    BoardPiece::BlackBishop,
+    BoardPiece::BlackRook,
+    BoardPiece::BlackQueen,
+];
 
 pub struct Board {
     side_length: u32,
@@ -21,6 +35,7 @@ pub struct Board {
     picked_piece: Option<Square>,
     mouse_state: MouseState,
     user_move: Option<Move>,
+    prom_choice_xywh: (f32, f32, f32, f32),
 }
 
 impl Default for Board {
@@ -28,6 +43,8 @@ impl Default for Board {
     fn default() -> Self {
         let font_src = Self::get_font_src();
         let font = fontdue::Font::from_bytes(font_src, fontdue::FontSettings::default()).unwrap();
+        let check_side = 720.0 / 8.0;
+        let size = 720.0 + 20.0;
         Board {
             side_length: 720,
             ruler_offset: 20,
@@ -42,6 +59,7 @@ impl Default for Board {
             mouse_state: MouseState::default(),
             picked_piece: None,
             user_move: None,
+            prom_choice_xywh: (size/2.0-2.0*check_side, size/2.0-0.5*check_side, 4.0*check_side, check_side),
         }
     }
 }
@@ -59,8 +77,40 @@ impl Board {
         self.picked_piece
     }
 
+    fn get_pos_prom_box(&self, pos: &(usize, usize)) -> Option<(usize, usize)> {
+        let inside = pos.0 > self.prom_choice_xywh.0 as usize
+            && pos.0 < (self.prom_choice_xywh.0 + self.prom_choice_xywh.2) as usize
+            && pos.1 > self.prom_choice_xywh.1 as usize
+            && pos.1 < (self.prom_choice_xywh.1 + self.prom_choice_xywh.3) as usize;
+        if inside {
+            let x = pos.0 - self.prom_choice_xywh.0 as usize;
+            let y = pos.1 - self.prom_choice_xywh.1 as usize;
+            return Some((x, y));
+        }
+        None
+    }
+
     pub fn handle_event(&mut self, e: BoardEvent, config: &BoardConfig) {
         self.update_mouse_state(e);
+
+        if let Some(m) = &self.user_move {
+            if m.is_empty_prom() {
+                if self.mouse_state.get_is_left_pressed() {
+                    let pos = self.mouse_state.get_pos();
+                    if let Some((x, _)) = self.get_pos_prom_box(&pos) {
+                        let i = x / self.prom_choice_xywh.3 as usize;
+                        let prom = match config.get_active_color() {
+                            Color::White => W_PROM_OPTS[i],
+                            Color::Black => B_PROM_OPTS[i],
+                        };
+                        self.user_move = Some(Move::new_prom(m.from, m.to, prom));
+                    } else {
+                        self.clear_user_move();
+                    }
+                }
+                return;
+            }
+        }
 
         let sq = self.get_sq_from_pointer();
 
@@ -233,6 +283,16 @@ impl Board {
             }
         }
 
+        if let Some(m) = self.user_move {
+            if m.is_empty_prom() {
+                let transform = tiny_skia::Transform::from_translate(
+                    self.prom_choice_xywh.0,
+                    self.prom_choice_xywh.1,
+                );
+                self.draw_prom_choice(config.get_active_color(), transform, &mut pixmap);
+            }
+        }
+
         // Draw the picked piece if any
         if let Some(sq) = self.picked_piece {
             let p = config.get_at_sq(sq).unwrap();
@@ -324,6 +384,46 @@ impl Board {
     fn get_font_src() -> Vec<u8> {
         let filename = "assets/fonts/Roboto-Bold.ttf";
         std::fs::read(filename).unwrap()
+    }
+
+    fn draw_prom_choice(
+        &mut self,
+        color: Color,
+        t: tiny_skia::Transform,
+        pixmap: &mut tiny_skia::Pixmap,
+    ) {
+        let check_side = self.get_check_side();
+        let mut pm = tiny_skia::Pixmap::new(
+            self.prom_choice_xywh.2 as u32,
+            self.prom_choice_xywh.3 as u32,
+        )
+        .unwrap();
+        let glyph_width = (check_side * 0.75) as u32;
+
+        let pieces = match color {
+            Color::White => W_PROM_OPTS,
+            Color::Black => B_PROM_OPTS,
+        };
+
+        pm.fill(tiny_skia::Color::WHITE);
+        for (i, p) in pieces.iter().enumerate() {
+            let tree = self.get_glyph_tree(&p);
+            let glyph_t = tiny_skia::Transform::from_translate(
+                i as f32 * check_side + glyph_width as f32 / 8.0,
+                glyph_width as f32 / 8.0,
+            );
+            let fit = usvg::FitTo::Width(glyph_width);
+            resvg::render(&tree, fit, glyph_t, pm.as_mut());
+        }
+
+        pixmap.draw_pixmap(
+            0,
+            0,
+            pm.as_ref(),
+            &tiny_skia::PixmapPaint::default(),
+            t,
+            None,
+        );
     }
 
     fn draw_char(

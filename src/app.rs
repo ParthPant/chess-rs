@@ -103,19 +103,11 @@ impl App {
                 Event::MainEventsCleared => {
                     if let Some(user_move) = board.get_user_move() {
                         if moves.has_target_sq(user_move.to) {
-                            if user_move.is_prom() {
-                                log::info!("Pawn Promotion Move");
-                                let m = Move::new_prom(
-                                    user_move.from,
-                                    user_move.to,
-                                    BoardPiece::WhiteKnight,
-                                );
-                                config.borrow_mut().apply_move(m);
-                            } else {
+                            if !user_move.is_empty_prom() {
                                 config.borrow_mut().apply_move(user_move);
+                                board.clear_user_move();
                             }
                         }
-                        board.clear_user_move();
                     }
                     let sq = board.get_picked_piece();
                     if sq != picked_sq {

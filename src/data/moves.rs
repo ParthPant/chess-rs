@@ -1,6 +1,6 @@
 use super::piece::BoardPiece;
 use super::square::Square;
-use super::{BoardConfig, CastleFlags, Color};
+use super::{BoardConfig, CastleFlags};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -96,6 +96,13 @@ impl Move {
     pub fn is_prom(&self) -> bool {
         if let MoveType::Promotion(_) = self.move_type {
             return true;
+        }
+        false
+    }
+
+    pub fn is_empty_prom(&self) -> bool {
+        if let MoveType::Promotion(p) = self.move_type {
+            return p == None;
         }
         false
     }

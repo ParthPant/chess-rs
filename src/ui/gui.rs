@@ -55,6 +55,12 @@ impl Gui {
                 ui.heading("Board Configuration");
                 egui::CollapsingHeader::new("FEN").show(ui, |ui| {
                     ui.label(egui::RichText::new(config.get_fen()).size(10.0).monospace());
+                    if ui
+                        .add(egui::Label::new("📋").sense(egui::Sense::click()))
+                        .clicked()
+                    {
+                        ui.output().copied_text = config.get_fen();
+                    }
                     ui.add(egui::TextEdit::multiline(&mut self.fen));
                     if ui.button("Load Fen").clicked() {
                         config.load_fen(&self.fen);
