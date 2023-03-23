@@ -26,7 +26,7 @@ macro_rules! make_enum {
 make_enum! {
     #[repr(u8)]
     #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone, Copy, EnumIter, EnumString, Display)]
-    #[strum(ascii_case_insensitive)]
+    #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
     pub enum Square {
         A1, B1, C1, D1, E1, F1, G1, H1,
         A2, B2, C2, D2, E2, F2, G2, H2,

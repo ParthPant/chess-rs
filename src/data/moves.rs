@@ -1,7 +1,7 @@
 use super::piece::BoardPiece;
 use super::square::Square;
 use super::{BoardConfig, CastleFlags};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, Result};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum CastleType {
@@ -117,20 +117,42 @@ impl Move {
 #[derive(Debug, Copy, Clone)]
 pub struct MoveCommit {
     pub m: Move,
+    pub p: BoardPiece,
     pub captured: Option<BoardPiece>,
     pub ep_target: Option<Square>,
     pub castledelta: CastleFlags,
 }
 
+impl Display for MoveCommit {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        use MoveType::*;
+        if self.m.move_type == EnPassant {
+            return write!(f, "{}{}e.p.", self.m.from, self.m.to);
+        } else if let Some(_) = self.captured {
+            return write!(f, "{}{}x{}", self.p, self.m.from, self.m.to);
+        } else if self.m.move_type == Castle(CastleType::KingSide) {
+            return write!(f, "0-0");
+        } else if self.m.move_type == Castle(CastleType::QueenSide) {
+            return write!(f, "0-0-0");
+        } else if let Promotion(Some(p)) = self.m.move_type {
+            return write!(f, "{}{}", self.m.to, p);
+        } else {
+            return write!(f, "{}{}{}", self.p, self.m.from, self.m.to);
+        }
+    }
+}
+
 impl MoveCommit {
     pub fn new(
         m: Move,
+        p: BoardPiece,
         captured: Option<BoardPiece>,
         ep_target: Option<Square>,
         castledelta: CastleFlags,
     ) -> Self {
         Self {
             m,
+            p,
             captured,
             ep_target,
             castledelta,

@@ -36,8 +36,8 @@ impl Default for BoardConfig {
 
 impl BoardConfig {
     pub fn apply_move(&mut self, m: Move) {
-        log::info!("{:?}", m);
         if let Some(commit) = self.make_move(m) {
+            log::info!("{}", commit);
             self.move_history.push(commit);
         }
     }
@@ -114,6 +114,7 @@ impl BoardConfig {
         self.toggle_active_color();
         Some(MoveCommit::new(
             m,
+            p,
             cap,
             prev_ep_target,
             CastleFlags(castledelta),
@@ -204,7 +205,7 @@ impl BoardConfig {
     pub fn undo_commit(&mut self, commit: &MoveCommit) {
         let m = commit.m;
         let cap = commit.captured;
-        let p = self.get_at_sq(m.to).unwrap();
+        let p = commit.p;
         let pcolor = p.get_color();
 
         use MoveType::*;
