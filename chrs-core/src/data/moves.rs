@@ -29,7 +29,13 @@ impl Display for Move {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use MoveType::*;
         if let Promotion(Some(p)) = self.move_type {
-            write!(f, "{}{}{}", self.from, self.to, p)
+            write!(
+                f,
+                "{}{}{}",
+                self.from,
+                self.to,
+                p.to_string().to_lowercase()
+            )
         } else {
             write!(f, "{}{}", self.from, self.to)
         }
@@ -59,7 +65,7 @@ impl Move {
         let p = c.get_at_sq(from).unwrap();
         let mut m: MoveType = Normal;
 
-        // castling
+        // Castling
         if p == BoardPiece::WhiteKing {
             if from == Square::E1 && to == Square::G1 {
                 m = Castle(CastleType::KingSide);
@@ -73,7 +79,7 @@ impl Move {
                 m = Castle(CastleType::QueenSide);
             }
         }
-        // double_push
+        // Pawn: Double Push, En Passant and Promotion
         else if p == BoardPiece::WhitePawn {
             if to as usize - from as usize == 16 {
                 m = DoublePush;
@@ -81,7 +87,8 @@ impl Move {
                 if to == t {
                     m = EnPassant;
                 }
-            } else if to >= Square::A8 {
+            }
+            if to >= Square::A8 {
                 m = Promotion(None);
             }
         } else if p == BoardPiece::BlackPawn {
@@ -91,7 +98,8 @@ impl Move {
                 if to == t {
                     m = EnPassant;
                 }
-            } else if to <= Square::H1 {
+            }
+            if to <= Square::H1 {
                 m = Promotion(None)
             }
         }
@@ -214,7 +222,7 @@ pub struct MoveList(Vec<Move>);
 
 impl MoveList {
     pub fn new() -> Self {
-        Self(Vec::with_capacity(50))
+        Self(Vec::with_capacity(10))
     }
 
     pub fn append(&mut self, mut list: MoveList) {

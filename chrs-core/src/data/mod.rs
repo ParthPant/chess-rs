@@ -93,9 +93,9 @@ impl BoardConfig {
         if m.from == Square::A1 || m.to == Square::A1 {
             self.castle_flags.unset_white_ooo();
         } else if m.from == Square::A8 || m.to == Square::A8 {
-            self.castle_flags.unset_black_oo();
+            self.castle_flags.unset_black_ooo();
         } else if m.from == Square::H1 || m.to == Square::H1 {
-            self.castle_flags.unset_white_ooo();
+            self.castle_flags.unset_white_oo();
         } else if m.from == Square::H8 || m.to == Square::H8 {
             self.castle_flags.unset_black_oo();
         } else if pcolor == Color::Black {

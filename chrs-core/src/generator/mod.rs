@@ -1,7 +1,7 @@
 pub mod tables;
 
 use crate::data::{
-    BitBoard, BoardConfig, BoardPiece, Color, Move, MoveList, Square, B_PIECES, W_PIECES,
+    BitBoard, BoardConfig, BoardPiece, Color, Move, MoveList, MoveType, Square, B_PIECES, W_PIECES,
 };
 use tables::*;
 
@@ -295,10 +295,6 @@ impl MoveGenerator {
         moves[magic_index(&magic, blockers)]
     }
 
-    fn get_queen_atk(&self, sq: Square, blockers: BitBoard) -> BitBoard {
-        self.get_rook_atk(sq, blockers) | self.get_bishop_atk(sq, blockers)
-    }
-
     fn get_white_pawn_atk(&self, sq: Square) -> BitBoard {
         WP_ATK_TBL[sq as usize].into()
     }
@@ -364,6 +360,11 @@ impl MoveGenerator {
                     }
                 }
             } else {
+                if let MoveType::Castle(_) = m.move_type {
+                    if self.is_sq_attacked(from, !p.get_color(), c) {
+                        continue;
+                    }
+                }
                 if self.is_legal(m, c, p.get_color()) {
                     list.add(m);
                 }

@@ -105,6 +105,7 @@ impl App {
                 }
                 Event::MainEventsCleared => {
                     if let Some(user_move) = board.get_user_move() {
+                        // log::debug!("User Move: {}", user_move);
                         if moves.has_target_sq(user_move.to) {
                             if !user_move.is_empty_prom() {
                                 config.borrow_mut().apply_move(user_move);

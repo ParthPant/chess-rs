@@ -64,12 +64,6 @@ impl Fen {
         s
     }
 
-    fn get_code_from_mat_coords(x: usize, y: usize) -> String {
-        let c = 'a'.to_ascii_lowercase() as u8 + x as u8;
-        let y = (y + 1) as u8;
-        std::str::from_utf8(&[c, y]).unwrap().to_string()
-    }
-
     fn get_piece_from_c(c: char) -> BoardPiece {
         if let Ok(p) = BoardPiece::from_str(&c.to_string()) {
             p

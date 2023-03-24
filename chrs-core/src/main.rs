@@ -1,9 +1,9 @@
-#![allow(dead_code)]
+#![allow(warnings, unused)]
 
 use pixels::Error;
 use pretty_env_logger;
 
-use chrs::app::App;
+use chrs_core::app::App;
 
 fn main() -> Result<(), Error> {
     // std::env::set_var("RUST_LOG", "chrs=debug");
