@@ -20,7 +20,7 @@ pub struct NegaMaxAI {
 
 impl Default for NegaMaxAI {
     fn default() -> Self {
-        Self { depth: 4 }
+        Self { depth: 3 }
     }
 }
 

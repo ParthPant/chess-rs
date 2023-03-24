@@ -129,14 +129,14 @@ impl MoveGenerator {
                 let friendly = config.white_occupancy();
                 let all = config.all_occupancy();
                 let mut moves = self.get_king_atk(pos) & !friendly;
-                if config.get_can_white_castle_kingside() {
+                if pos == Square::E1 && config.get_can_white_castle_kingside() {
                     if !(all.is_set(Square::F1) || all.is_set(Square::G1))
                         && !self.is_sq_attacked(Square::F1, Color::Black, &mut config)
                     {
                         moves.set(Square::G1);
                     }
                 }
-                if config.get_can_white_castle_queenside() {
+                if pos == Square::E1 && config.get_can_white_castle_queenside() {
                     if !(all.is_set(Square::B1) || all.is_set(Square::C1) || all.is_set(Square::D1))
                         && !self.is_sq_attacked(Square::D1, Color::Black, &mut config)
                     {
@@ -149,14 +149,14 @@ impl MoveGenerator {
                 let friendly = config.black_occupancy();
                 let all = config.all_occupancy();
                 let mut moves = self.get_king_atk(pos) & !friendly;
-                if config.get_can_black_castle_kingside() {
+                if pos == Square::E8 && config.get_can_black_castle_kingside() {
                     if !(all.is_set(Square::F8) || all.is_set(Square::G8))
                         && !self.is_sq_attacked(Square::F8, Color::White, &mut config)
                     {
                         moves.set(Square::G8);
                     }
                 }
-                if config.get_can_black_castle_queenside() {
+                if pos == Square::E8 && config.get_can_black_castle_queenside() {
                     if !(all.is_set(Square::B8) || all.is_set(Square::C8) || all.is_set(Square::D8))
                         && !self.is_sq_attacked(Square::D8, Color::White, &mut config)
                     {

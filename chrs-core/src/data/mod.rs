@@ -35,6 +35,22 @@ impl Default for BoardConfig {
 }
 
 impl BoardConfig {
+    pub fn print_board(&self) {
+        for y in (0..8).rev() {
+            print!("{}", y + 1);
+            for x in 0..8 {
+                let sq = Square::try_from((x, y)).unwrap();
+                if let Some(p) = self.get_at_sq(sq) {
+                    print!("  {}", p.utf_str());
+                } else {
+                    print!("  .");
+                }
+            }
+            print!("\n");
+        }
+        println!("   a  b  c  d  e  f  g  h");
+    }
+
     pub fn get_last_commit(&self) -> Option<MoveCommit> {
         self.move_history.get_last()
     }
@@ -92,18 +108,21 @@ impl BoardConfig {
         // castling state update
         if m.from == Square::A1 || m.to == Square::A1 {
             self.castle_flags.unset_white_ooo();
-        } else if m.from == Square::A8 || m.to == Square::A8 {
+        }
+        if m.from == Square::A8 || m.to == Square::A8 {
             self.castle_flags.unset_black_ooo();
-        } else if m.from == Square::H1 || m.to == Square::H1 {
+        }
+        if m.from == Square::H1 || m.to == Square::H1 {
             self.castle_flags.unset_white_oo();
-        } else if m.from == Square::H8 || m.to == Square::H8 {
+        }
+        if m.from == Square::H8 || m.to == Square::H8 {
             self.castle_flags.unset_black_oo();
-        } else if pcolor == Color::Black {
-            self.fullmove_number += 1;
-        } else if m.from == Square::E1 || m.to == Square::E1 {
+        }
+        if m.from == Square::E1 || m.to == Square::E1 {
             self.castle_flags.unset_white_oo();
             self.castle_flags.unset_white_ooo();
-        } else if m.from == Square::E8 || m.to == Square::E8 {
+        }
+        if m.from == Square::E8 || m.to == Square::E8 {
             self.castle_flags.unset_black_oo();
             self.castle_flags.unset_black_ooo();
         }
@@ -401,9 +420,14 @@ impl BoardConfig {
     }
 
     fn move_piece(&mut self, from: Square, to: Square) {
-        let p = self.get_at_sq(from).unwrap();
-        self.remove_piece(from);
-        self.add_piece(p, to);
+        if let Some(p) = self.get_at_sq(from) {
+            self.remove_piece(from);
+            self.add_piece(p, to);
+        } else {
+            log::error!("No Piece at {}", from);
+            self.print_board();
+            panic!();
+        }
     }
 
     fn remove_piece(&mut self, from: Square) -> Option<BoardPiece> {
@@ -484,3 +508,6 @@ impl CastleFlags {
         self.0 &= !(1 << 3);
     }
 }
+
+#[derive(Debug)]
+struct NoPieceErr;

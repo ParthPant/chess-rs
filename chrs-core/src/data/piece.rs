@@ -61,6 +61,24 @@ impl BoardPiece {
             }
         }
     }
+
+    pub fn utf_str(&self) -> &'static str {
+        use BoardPiece::*;
+        match self {
+            WhitePawn => "♙",
+            WhiteKnight => "♘",
+            WhiteBishop => "♗",
+            WhiteRook => "♖",
+            WhiteQueen => "♕",
+            WhiteKing => "♔",
+            BlackPawn => "♟",
+            BlackKnight => "♞",
+            BlackBishop => "♝",
+            BlackRook => "♜",
+            BlackQueen => "♛",
+            BlackKing => "♚",
+        }
+    }
 }
 
 pub const W_PIECES: [BoardPiece; 6] = {
