@@ -13,9 +13,10 @@ This section should list any major features of chess-rs
 - [x] GUI gameplay
 - [x] Perft Runner
 - [x] Egui Integration
-- [ ] Move Evaluation
+- [x] Board Evaluation (Matrial and Positional)
+- [x] AI (NegaMax with Quiescence Search)
+- [ ] Move Ordering
 - [ ] Zobrist Hashing
-- [ ] AI (aims to be modular)
 - [ ] UCI Interface
 
 
