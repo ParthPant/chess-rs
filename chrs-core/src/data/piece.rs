@@ -21,31 +21,31 @@ impl Not for Color {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Display, EnumString, EnumIter)]
 pub enum BoardPiece {
-    #[strum(serialize = "K")]
-    WhiteKing,
-    #[strum(serialize = "R")]
-    WhiteRook,
-    #[strum(serialize = "B")]
-    WhiteBishop,
-    #[strum(serialize = "Q")]
-    WhiteQueen,
-    #[strum(serialize = "N")]
-    WhiteKnight,
     #[strum(serialize = "P")]
     WhitePawn,
+    #[strum(serialize = "N")]
+    WhiteKnight,
+    #[strum(serialize = "B")]
+    WhiteBishop,
+    #[strum(serialize = "R")]
+    WhiteRook,
+    #[strum(serialize = "Q")]
+    WhiteQueen,
+    #[strum(serialize = "K")]
+    WhiteKing,
 
-    #[strum(serialize = "k")]
-    BlackKing,
-    #[strum(serialize = "r")]
-    BlackRook,
-    #[strum(serialize = "b")]
-    BlackBishop,
-    #[strum(serialize = "q")]
-    BlackQueen,
-    #[strum(serialize = "n")]
-    BlackKnight,
     #[strum(serialize = "p")]
     BlackPawn,
+    #[strum(serialize = "n")]
+    BlackKnight,
+    #[strum(serialize = "b")]
+    BlackBishop,
+    #[strum(serialize = "r")]
+    BlackRook,
+    #[strum(serialize = "q")]
+    BlackQueen,
+    #[strum(serialize = "k")]
+    BlackKing,
 }
 
 impl BoardPiece {

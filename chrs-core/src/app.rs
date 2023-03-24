@@ -1,5 +1,6 @@
+use crate::ai::{NegaMaxAI, AI};
 use crate::board::{events::BoardEvent, Board};
-use crate::data::{BoardConfig, MoveList, Square};
+use crate::data::{BoardConfig, Color, MoveList, Square};
 use crate::generator::MoveGenerator;
 use crate::ui::GuiFramework;
 
@@ -31,11 +32,9 @@ impl App {
             .unwrap();
 
         let mut board = Board::default();
-        // let config = Rc::new(RefCell::new(BoardConfig::default()));
-        let config = Rc::new(RefCell::new(BoardConfig::from_fen_str(
-            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-        )));
+        let config = Rc::new(RefCell::new(BoardConfig::default()));
         let generator = MoveGenerator::default();
+        let ai = NegaMaxAI::default();
 
         let (mut pixels, mut framework) = {
             let window_size = window.inner_size();
@@ -104,24 +103,34 @@ impl App {
                     }
                 }
                 Event::MainEventsCleared => {
-                    if let Some(user_move) = board.get_user_move() {
-                        // log::debug!("User Move: {}", user_move);
-                        if moves.has_target_sq(user_move.to) {
-                            if !user_move.is_empty_prom() {
-                                config.borrow_mut().apply_move(user_move);
-                                board.clear_user_move();
+                    if config.borrow().get_active_color() == Color::Black {
+                        let start = Instant::now();
+                        let ai_move = ai.get_best_move(&config.borrow(), &generator);
+                        let duration = start.elapsed();
+                        log::info!("AI generated move in {:?}", duration);
+                        if ai_move.is_some() {
+                            config.borrow_mut().apply_move(ai_move.unwrap());
+                        }
+                    } else {
+                        if let Some(user_move) = board.get_user_move() {
+                            // log::debug!("User Move: {}", user_move);
+                            if moves.has_target_sq(user_move.to) {
+                                if !user_move.is_empty_prom() {
+                                    config.borrow_mut().apply_move(user_move);
+                                    board.clear_user_move();
+                                }
                             }
                         }
-                    }
-                    let sq = board.get_picked_piece();
-                    if sq != picked_sq {
-                        picked_sq = sq;
-                        if let Some(sq) = sq {
-                            let p = config.borrow().get_at_sq(sq).unwrap();
-                            let start = Instant::now();
-                            moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
-                            let duration = start.elapsed();
-                            log::debug!("Generated {} moves in {:?}", moves.len(), duration)
+                        let sq = board.get_picked_piece();
+                        if sq != picked_sq {
+                            picked_sq = sq;
+                            if let Some(sq) = sq {
+                                let p = config.borrow().get_at_sq(sq).unwrap();
+                                // let start = Instant::now();
+                                moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
+                                // let duration = start.elapsed();
+                                // log::debug!("Generated {} moves in {:?}", moves.len(), duration)
+                            }
                         }
                     }
                     window.request_redraw();

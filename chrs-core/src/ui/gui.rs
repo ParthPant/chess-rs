@@ -47,6 +47,7 @@ impl Gui {
 
                     if ui.button("Undo").clicked() {
                         config.undo();
+                        config.undo();
                     }
                 });
 
