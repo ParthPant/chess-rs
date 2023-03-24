@@ -107,7 +107,7 @@ impl App {
                         let start = Instant::now();
                         let ai_move = ai.get_best_move(&config.borrow(), &generator);
                         let duration = start.elapsed();
-                        log::info!("AI generated move in {:?}", duration);
+                        log::info!("AI response in {:?}", duration);
                         if ai_move.is_some() {
                             config.borrow_mut().apply_move(ai_move.unwrap());
                         }

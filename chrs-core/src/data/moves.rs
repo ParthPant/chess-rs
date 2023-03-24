@@ -22,6 +22,7 @@ pub enum MoveType {
 pub struct Move {
     pub from: Square,
     pub to: Square,
+    pub is_capture: bool,
     pub move_type: MoveType,
 }
 
@@ -43,18 +44,20 @@ impl Display for Move {
 }
 
 impl Move {
-    pub fn new(from: Square, to: Square, m: MoveType) -> Self {
+    pub fn new(from: Square, to: Square, is_caputre: bool, m: MoveType) -> Self {
         Self {
             from,
             to,
+            is_capture: is_caputre,
             move_type: m,
         }
     }
 
-    pub fn new_prom(from: Square, to: Square, p: BoardPiece) -> Self {
+    pub fn new_prom(from: Square, to: Square, is_capture: bool, p: BoardPiece) -> Self {
         Self {
             from,
             to,
+            is_capture,
             move_type: MoveType::Promotion(Some(p)),
         }
     }
@@ -106,6 +109,7 @@ impl Move {
         Self {
             from,
             to,
+            is_capture: c.get_at_sq(to).is_some(),
             move_type: m,
         }
     }

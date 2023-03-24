@@ -20,7 +20,7 @@ pub struct NegaMaxAI {
 
 impl Default for NegaMaxAI {
     fn default() -> Self {
-        Self { depth: 5 }
+        Self { depth: 4 }
     }
 }
 
@@ -34,25 +34,56 @@ impl NegaMaxAI {
         depth: usize,
     ) -> i32 {
         if depth == 0 {
-            return evaluate(config);
+            // return evaluate(config);
+            return self.quiescence(config, gen, alpha, beta);
         }
 
         let mut value = MIN;
         let moves = gen.gen_all_moves(config.get_active_color(), config);
         for m in moves.iter() {
             if let Some(commit) = config.make_move(*m) {
-                let v = -self.nega_max(config, gen, alpha, beta, depth - 1);
-                value = i32::max(value, v);
+                value = i32::max(value, -self.nega_max(config, gen, -beta, -alpha, depth - 1));
                 config.undo_commit(&commit);
                 alpha = i32::max(alpha, value);
                 if alpha >= beta {
-                    // log::debug!("Cut-off");
                     break;
                 }
             }
         }
 
         value
+    }
+
+    fn quiescence(
+        &self,
+        config: &mut BoardConfig,
+        gen: &MoveGenerator,
+        mut alpha: i32,
+        beta: i32,
+    ) -> i32 {
+        let eval = evaluate(config);
+        if eval >= beta {
+            return beta;
+        }
+        if alpha < eval {
+            alpha = eval;
+        }
+
+        for m in gen
+            .gen_all_moves(config.get_active_color(), config)
+            .iter()
+            .filter(|m| m.is_capture)
+        {
+            if let Some(commit) = config.make_move(*m) {
+                let score = -self.quiescence(config, gen, -beta, -alpha);
+                config.undo_commit(&commit);
+                if score >= beta {
+                    return beta;
+                }
+                alpha = i32::max(alpha, score);
+            }
+        }
+        alpha
     }
 }
 
@@ -65,7 +96,6 @@ impl AI for NegaMaxAI {
         for m in moves.iter() {
             if let Some(commit) = config.make_move(*m) {
                 let score = -self.nega_max(&mut config, gen, MIN, MAX, self.depth - 1);
-                // log::debug!("Candidate score: {}", score);
                 if score >= best_score {
                     best_score = score;
                     best = Some(*m);
@@ -73,8 +103,6 @@ impl AI for NegaMaxAI {
                 config.undo_commit(&commit);
             }
         }
-
-        // log::debug!("Chosen score: {}", best_score);
         best
     }
 }

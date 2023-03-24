@@ -103,7 +103,7 @@ impl Board {
                             Color::White => W_PROM_OPTS[i],
                             Color::Black => B_PROM_OPTS[i],
                         };
-                        self.user_move = Some(Move::new_prom(m.from, m.to, prom));
+                        self.user_move = Some(Move::new_prom(m.from, m.to, m.is_capture, prom));
                     } else {
                         self.clear_user_move();
                     }

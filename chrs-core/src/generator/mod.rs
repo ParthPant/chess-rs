@@ -342,20 +342,20 @@ impl MoveGenerator {
                 use BoardPiece::*;
                 match p.get_color() {
                     Color::White => {
-                        let m = Move::new_prom(from, to, WhiteRook);
+                        let m = Move::new_prom(from, to, m.is_capture, WhiteRook);
                         if self.is_legal(m, c, p.get_color()) {
                             list.add(m);
-                            list.add(Move::new_prom(from, to, WhiteBishop));
-                            list.add(Move::new_prom(from, to, WhiteKnight));
-                            list.add(Move::new_prom(from, to, WhiteQueen));
+                            list.add(Move::new_prom(from, to, m.is_capture, WhiteBishop));
+                            list.add(Move::new_prom(from, to, m.is_capture, WhiteKnight));
+                            list.add(Move::new_prom(from, to, m.is_capture, WhiteQueen));
                         }
                     }
                     Color::Black => {
-                        let m = Move::new_prom(from, to, BlackRook);
+                        let m = Move::new_prom(from, to, m.is_capture, BlackRook);
                         if self.is_legal(m, c, p.get_color()) {
-                            list.add(Move::new_prom(from, to, BlackBishop));
-                            list.add(Move::new_prom(from, to, BlackKnight));
-                            list.add(Move::new_prom(from, to, BlackQueen));
+                            list.add(Move::new_prom(from, to, m.is_capture, BlackBishop));
+                            list.add(Move::new_prom(from, to, m.is_capture, BlackKnight));
+                            list.add(Move::new_prom(from, to, m.is_capture, BlackQueen));
                         }
                     }
                 }
