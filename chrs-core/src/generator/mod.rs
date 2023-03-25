@@ -49,7 +49,12 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
-    pub fn gen_all_moves(&self, side: Color, config: &BoardConfig) -> MoveList {
+    pub fn gen_all_moves(
+        &self,
+        side: Color,
+        config: &BoardConfig,
+        only_captures: bool,
+    ) -> MoveList {
         let pieces = match side {
             Color::White => &W_PIECES,
             Color::Black => &B_PIECES,
@@ -60,7 +65,7 @@ impl MoveGenerator {
             let mut bb = config.bitboards[*p as usize];
             while bb.data() > 0 {
                 let pos = bb.pop_sq().unwrap();
-                let piece_moves = self.gen_piece_moves(*p, pos, config);
+                let piece_moves = self.gen_piece_moves(*p, pos, config, only_captures);
                 moves.append(piece_moves);
             }
         }
@@ -73,60 +78,33 @@ impl MoveGenerator {
         piece: BoardPiece,
         pos: Square,
         config: &BoardConfig,
+        only_captures: bool,
     ) -> MoveList {
         use BoardPiece::*;
         let mut config = config.clone();
-        match piece {
-            WhiteRook => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                let moves = self.get_rook_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
-            }
-            BlackRook => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                let moves = self.get_rook_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
-            }
-            WhiteBishop => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                let moves = self.get_bishop_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
-            }
-            BlackBishop => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                let moves = self.get_bishop_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
-            }
-            WhiteKnight => {
-                let friendly = config.white_occupancy();
-                let moves = self.get_knight_atk(pos) & !friendly;
-                self.make_movelist(moves, pos, &mut config)
-            }
-            BlackKnight => {
-                let friendly = config.black_occupancy();
-                let moves = self.get_knight_atk(pos) & !friendly;
-                self.make_movelist(moves, pos, &mut config)
-            }
+        let (friendly, enemy) = match piece.get_color() {
+            Color::White => (config.white_occupancy(), config.black_occupancy()),
+            Color::Black => (config.black_occupancy(), config.white_occupancy()),
+        };
+        let blockers = config.all_occupancy();
+        let mut ep_moves = BitBoard::default();
+
+        let moves = match piece {
+            WhiteRook => self.get_rook_moves(pos, blockers, friendly),
+            BlackRook => self.get_rook_moves(pos, blockers, friendly),
+            WhiteBishop => self.get_bishop_moves(pos, blockers, friendly),
+            BlackBishop => self.get_bishop_moves(pos, blockers, friendly),
+            WhiteKnight => self.get_knight_atk(pos) & !friendly,
+            BlackKnight => self.get_knight_atk(pos) & !friendly,
             WhiteQueen => {
-                let blockers = config.all_occupancy();
-                let friendly = config.white_occupancy();
-                let moves = self.get_rook_moves(pos, blockers, friendly)
-                    | self.get_bishop_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
+                self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly)
             }
             BlackQueen => {
-                let blockers = config.all_occupancy();
-                let friendly = config.black_occupancy();
-                let moves = self.get_rook_moves(pos, blockers, friendly)
-                    | self.get_bishop_moves(pos, blockers, friendly);
-                self.make_movelist(moves, pos, &mut config)
+                self.get_rook_moves(pos, blockers, friendly)
+                    | self.get_bishop_moves(pos, blockers, friendly)
             }
             WhiteKing => {
-                let friendly = config.white_occupancy();
                 let all = config.all_occupancy();
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if pos == Square::E1 && config.get_can_white_castle_kingside() {
@@ -143,10 +121,9 @@ impl MoveGenerator {
                         moves.set(Square::C1);
                     }
                 }
-                self.make_movelist(moves, pos, &mut config)
+                moves
             }
             BlackKing => {
-                let friendly = config.black_occupancy();
                 let all = config.all_occupancy();
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if pos == Square::E8 && config.get_can_black_castle_kingside() {
@@ -163,11 +140,9 @@ impl MoveGenerator {
                         moves.set(Square::C8);
                     }
                 }
-                self.make_movelist(moves, pos, &mut config)
+                moves
             }
             WhitePawn => {
-                let friendly = config.white_occupancy();
-                let enemy = config.black_occupancy();
                 let quiet = {
                     if pos < Square::A8 {
                         // not in rank 8
@@ -182,17 +157,15 @@ impl MoveGenerator {
                     }
                 };
                 let atks = self.get_white_pawn_atk(pos);
-                let mut moves = quiet | (atks & enemy);
+                let moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
                     if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
-                        moves |= BitBoard::from(1 << t as usize);
+                        ep_moves |= BitBoard::from(1 << t as usize);
                     }
                 }
-                self.make_movelist(moves, pos, &mut config)
+                moves
             }
             BlackPawn => {
-                let friendly = config.black_occupancy();
-                let enemy = config.white_occupancy();
                 let quiet = {
                     if pos > Square::H1 {
                         // not in rank 1
@@ -207,14 +180,20 @@ impl MoveGenerator {
                     }
                 };
                 let atks = self.get_black_pawn_atk(pos);
-                let mut moves = quiet | (atks & enemy);
+                let moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
                     if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
-                        moves |= BitBoard::from(1 << t as usize);
+                        ep_moves |= BitBoard::from(1 << t as usize);
                     }
                 }
-                self.make_movelist(moves, pos, &mut config)
+                moves
             }
+        };
+
+        if only_captures {
+            self.make_movelist((moves & enemy) | ep_moves, pos, &mut config)
+        } else {
+            self.make_movelist(moves | ep_moves, pos, &mut config)
         }
     }
 
@@ -342,20 +321,20 @@ impl MoveGenerator {
                 use BoardPiece::*;
                 match p.get_color() {
                     Color::White => {
-                        let m = Move::new_prom(from, to, m.is_capture, WhiteRook);
+                        let m = Move::new_prom(from, to, m.capture, WhiteRook);
                         if self.is_legal(m, c, p.get_color()) {
                             list.add(m);
-                            list.add(Move::new_prom(from, to, m.is_capture, WhiteBishop));
-                            list.add(Move::new_prom(from, to, m.is_capture, WhiteKnight));
-                            list.add(Move::new_prom(from, to, m.is_capture, WhiteQueen));
+                            list.add(Move::new_prom(from, to, m.capture, WhiteBishop));
+                            list.add(Move::new_prom(from, to, m.capture, WhiteKnight));
+                            list.add(Move::new_prom(from, to, m.capture, WhiteQueen));
                         }
                     }
                     Color::Black => {
-                        let m = Move::new_prom(from, to, m.is_capture, BlackRook);
+                        let m = Move::new_prom(from, to, m.capture, BlackRook);
                         if self.is_legal(m, c, p.get_color()) {
-                            list.add(Move::new_prom(from, to, m.is_capture, BlackBishop));
-                            list.add(Move::new_prom(from, to, m.is_capture, BlackKnight));
-                            list.add(Move::new_prom(from, to, m.is_capture, BlackQueen));
+                            list.add(Move::new_prom(from, to, m.capture, BlackBishop));
+                            list.add(Move::new_prom(from, to, m.capture, BlackKnight));
+                            list.add(Move::new_prom(from, to, m.capture, BlackQueen));
                         }
                     }
                 }

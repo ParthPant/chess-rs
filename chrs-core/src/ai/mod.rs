@@ -1,9 +1,11 @@
+use std::time::{Duration, Instant};
+
 use crate::{
     data::{BoardConfig, Move},
     generator::MoveGenerator,
 };
 
-use self::eval::evaluate;
+use self::eval::*;
 
 mod eval;
 
@@ -11,22 +13,33 @@ const MIN: i32 = -1000000000;
 const MAX: i32 = 1000000000;
 
 pub trait AI {
-    fn get_best_move(&self, config: &BoardConfig, gen: &MoveGenerator) -> Option<Move>;
+    fn get_best_move(&mut self, config: &BoardConfig, gen: &MoveGenerator) -> Option<Move>;
+    fn get_stats(&self) -> AIStat;
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub struct AIStat {
+    node_count: usize,
+    time: Duration,
 }
 
 pub struct NegaMaxAI {
     depth: usize,
+    stats: AIStat,
 }
 
 impl Default for NegaMaxAI {
     fn default() -> Self {
-        Self { depth: 3 }
+        Self {
+            depth: 3,
+            stats: Default::default(),
+        }
     }
 }
 
 impl NegaMaxAI {
     fn nega_max(
-        &self,
+        &mut self,
         config: &mut BoardConfig,
         gen: &MoveGenerator,
         mut alpha: i32,
@@ -38,8 +51,14 @@ impl NegaMaxAI {
             return self.quiescence(config, gen, alpha, beta);
         }
 
+        self.stats.node_count += 1;
+
         let mut value = MIN;
-        let moves = gen.gen_all_moves(config.get_active_color(), config);
+        let mut moves = gen.gen_all_moves(config.get_active_color(), &config, false);
+        moves
+            .data()
+            .sort_by(|a, b| score_move(b, config, gen).cmp(&score_move(a, config, gen)));
+
         for m in moves.iter() {
             if let Some(commit) = config.make_move(*m) {
                 value = i32::max(value, -self.nega_max(config, gen, -beta, -alpha, depth - 1));
@@ -55,12 +74,14 @@ impl NegaMaxAI {
     }
 
     fn quiescence(
-        &self,
+        &mut self,
         config: &mut BoardConfig,
         gen: &MoveGenerator,
         mut alpha: i32,
         beta: i32,
     ) -> i32 {
+        self.stats.node_count += 1;
+
         let eval = evaluate(config);
         if eval >= beta {
             return beta;
@@ -69,11 +90,13 @@ impl NegaMaxAI {
             alpha = eval;
         }
 
-        for m in gen
-            .gen_all_moves(config.get_active_color(), config)
-            .iter()
-            .filter(|m| m.is_capture)
-        {
+        let mut moves = gen.gen_all_moves(config.get_active_color(), &config, true);
+        moves
+            .data()
+            .sort_by(|a, b| score_move(b, config, gen).cmp(&score_move(a, config, gen)));
+
+        for m in moves.iter() {
+            assert!(m.capture.is_some());
             if let Some(commit) = config.make_move(*m) {
                 let score = -self.quiescence(config, gen, -beta, -alpha);
                 config.undo_commit(&commit);
@@ -88,11 +111,13 @@ impl NegaMaxAI {
 }
 
 impl AI for NegaMaxAI {
-    fn get_best_move(&self, config: &BoardConfig, gen: &MoveGenerator) -> Option<Move> {
+    fn get_best_move(&mut self, config: &BoardConfig, gen: &MoveGenerator) -> Option<Move> {
+        self.stats = Default::default();
         let mut best = None;
         let mut best_score = MIN;
         let mut config = config.clone();
-        let moves = gen.gen_all_moves(config.get_active_color(), &config);
+        let moves = gen.gen_all_moves(config.get_active_color(), &config, false);
+        let now = Instant::now();
         for m in moves.iter() {
             if let Some(commit) = config.make_move(*m) {
                 let score = -self.nega_max(&mut config, gen, MIN, MAX, self.depth - 1);
@@ -103,6 +128,11 @@ impl AI for NegaMaxAI {
                 config.undo_commit(&commit);
             }
         }
+        self.stats.time = now.elapsed();
         best
+    }
+
+    fn get_stats(&self) -> AIStat {
+        self.stats
     }
 }

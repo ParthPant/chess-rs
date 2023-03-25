@@ -22,7 +22,7 @@ pub enum MoveType {
 pub struct Move {
     pub from: Square,
     pub to: Square,
-    pub is_capture: bool,
+    pub capture: Option<BoardPiece>,
     pub move_type: MoveType,
 }
 
@@ -44,20 +44,20 @@ impl Display for Move {
 }
 
 impl Move {
-    pub fn new(from: Square, to: Square, is_caputre: bool, m: MoveType) -> Self {
+    pub fn new(from: Square, to: Square, capture: Option<BoardPiece>, m: MoveType) -> Self {
         Self {
             from,
             to,
-            is_capture: is_caputre,
+            capture,
             move_type: m,
         }
     }
 
-    pub fn new_prom(from: Square, to: Square, is_capture: bool, p: BoardPiece) -> Self {
+    pub fn new_prom(from: Square, to: Square, capture: Option<BoardPiece>, p: BoardPiece) -> Self {
         Self {
             from,
             to,
-            is_capture,
+            capture,
             move_type: MoveType::Promotion(Some(p)),
         }
     }
@@ -67,6 +67,7 @@ impl Move {
 
         let p = c.get_at_sq(from).unwrap();
         let mut m: MoveType = Normal;
+        let mut capture = c.get_at_sq(to);
 
         // Castling
         if p == BoardPiece::WhiteKing {
@@ -88,6 +89,7 @@ impl Move {
                 m = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
+                    capture = c.get_at_sq(Square::try_from(t as usize - 8).unwrap());
                     m = EnPassant;
                 }
             }
@@ -99,6 +101,7 @@ impl Move {
                 m = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
+                    capture = c.get_at_sq(Square::try_from(t as usize + 8).unwrap());
                     m = EnPassant;
                 }
             }
@@ -109,7 +112,7 @@ impl Move {
         Self {
             from,
             to,
-            is_capture: c.get_at_sq(to).is_some(),
+            capture,
             move_type: m,
         }
     }
@@ -222,11 +225,15 @@ impl MoveHistory {
     }
 }
 
-pub struct MoveList(Vec<Move>);
+pub struct MoveList(pub Vec<Move>);
 
 impl MoveList {
     pub fn new() -> Self {
         Self(Vec::with_capacity(10))
+    }
+
+    pub fn data(&mut self) -> &mut Vec<Move> {
+        &mut self.0
     }
 
     pub fn append(&mut self, mut list: MoveList) {

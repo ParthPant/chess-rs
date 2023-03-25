@@ -11,7 +11,7 @@ fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divid
     }
 
     let side = config.get_active_color();
-    let moves = gen.gen_all_moves(side, config);
+    let moves = gen.gen_all_moves(side, config, false);
 
     if depth == 1 {
         return moves.len();

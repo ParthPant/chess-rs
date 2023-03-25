@@ -1,4 +1,7 @@
-use crate::data::{BoardConfig, BoardPiece, Color, Square};
+use crate::{
+    data::{BoardConfig, BoardPiece, Color, Move, MoveType, Square},
+    generator::MoveGenerator,
+};
 use strum::IntoEnumIterator;
 
 const MATERIAL_SCORE: [i32; 12] = [
@@ -135,4 +138,49 @@ pub fn evaluate(config: &BoardConfig) -> i32 {
         }
     }
     score
+}
+
+#[rustfmt::skip]
+const MVV_LVA: [[i32; 12]; 12] = [
+    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605],
+    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604],
+    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603],
+    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602],
+    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601],
+    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
+
+    [105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605],
+    [104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604],
+    [103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603],
+    [102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602],
+    [101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601],
+    [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
+];
+
+fn score_mvv_lva(m: &Move, config: &BoardConfig) -> i32 {
+    if m.capture.is_none() {
+        return 0;
+    }
+    let atk = config.get_at_sq(m.from).unwrap();
+    let victim = m.capture.unwrap();
+
+    MVV_LVA[atk as usize][victim as usize]
+}
+
+fn score_quiet_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
+    let p = config.get_at_sq(m.from).unwrap();
+    let mut score = 0;
+    if let MoveType::Promotion(Some(prom)) = m.move_type {
+        score += MATERIAL_SCORE[prom as usize];
+    }
+    if gen.is_sq_attacked(m.to, !p.get_color(), config) {
+        score -= MATERIAL_SCORE[p as usize];
+    }
+    score
+}
+
+pub fn score_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
+    let capture_score = score_mvv_lva(m, config);
+    let quiet_score = score_quiet_move(m, config, gen);
+    capture_score + quiet_score
 }

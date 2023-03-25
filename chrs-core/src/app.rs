@@ -8,7 +8,6 @@ use log;
 use pixels::{Error, Pixels, SurfaceTexture};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Instant;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -33,8 +32,11 @@ impl App {
 
         let mut board = Board::default();
         let config = Rc::new(RefCell::new(BoardConfig::default()));
+        // let config = Rc::new(RefCell::new(BoardConfig::from_fen_str(
+        //     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
+        // )));
         let generator = MoveGenerator::default();
-        let ai = NegaMaxAI::default();
+        let mut ai = NegaMaxAI::default();
 
         let (mut pixels, mut framework) = {
             let window_size = window.inner_size();
@@ -104,10 +106,8 @@ impl App {
                 }
                 Event::MainEventsCleared => {
                     if config.borrow().get_active_color() == Color::Black {
-                        let start = Instant::now();
                         let ai_move = ai.get_best_move(&config.borrow(), &generator);
-                        let duration = start.elapsed();
-                        log::info!("AI response in {:?}", duration);
+                        log::info!("AI response {:?}", ai.get_stats());
                         if ai_move.is_some() {
                             config.borrow_mut().apply_move(ai_move.unwrap());
                         }
@@ -127,7 +127,8 @@ impl App {
                             if let Some(sq) = sq {
                                 let p = config.borrow().get_at_sq(sq).unwrap();
                                 // let start = Instant::now();
-                                moves = generator.gen_piece_moves(p, sq, &(*config).borrow());
+                                moves =
+                                    generator.gen_piece_moves(p, sq, &(*config).borrow(), false);
                                 // let duration = start.elapsed();
                                 // log::debug!("Generated {} moves in {:?}", moves.len(), duration)
                             }

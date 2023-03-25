@@ -36,19 +36,25 @@ impl Default for BoardConfig {
 
 impl BoardConfig {
     pub fn print_board(&self) {
+        println!("{}", self.to_string());
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut s = String::new();
         for y in (0..8).rev() {
-            print!("{}", y + 1);
+            s = format!("{}{}", s, y + 1);
             for x in 0..8 {
                 let sq = Square::try_from((x, y)).unwrap();
                 if let Some(p) = self.get_at_sq(sq) {
-                    print!("  {}", p.utf_str());
+                    s = format!("{}  {}", s, p.utf_str());
                 } else {
-                    print!("  .");
+                    s = format!("{}  .", s);
                 }
             }
-            print!("\n");
+            s = format!("{}\n", s);
         }
-        println!("   a  b  c  d  e  f  g  h");
+        s = format!("{}   a  b  c  d  e  f  g  h", s);
+        s
     }
 
     pub fn get_last_commit(&self) -> Option<MoveCommit> {
@@ -150,7 +156,7 @@ impl BoardConfig {
 
     fn make_double_push(&mut self, from: Square, to: Square, p: BoardPiece) -> Option<BoardPiece> {
         let pcolor = p.get_color();
-        self.remove_piece(to);
+        // self.remove_piece(to);
         self.move_piece(from, to);
         if pcolor == Color::White {
             self.en_passant_target = Some(Square::try_from(to as usize - 8).unwrap());
@@ -211,8 +217,8 @@ impl BoardConfig {
     }
 
     fn make_promotion(&mut self, from: Square, to: Square, prom: BoardPiece) -> Option<BoardPiece> {
-        self.remove_piece(from);
         let cap = self.remove_piece(to);
+        self.remove_piece(from);
         self.add_piece(prom, to);
         cap
     }
