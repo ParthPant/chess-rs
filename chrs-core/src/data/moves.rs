@@ -18,12 +18,23 @@ pub enum MoveType {
     Promotion(Option<BoardPiece>),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Move {
     pub from: Square,
     pub to: Square,
     pub capture: Option<BoardPiece>,
     pub move_type: MoveType,
+}
+
+impl Default for Move {
+    fn default() -> Self {
+        Self {
+            from: Square::A1,
+            to: Square::A1,
+            capture: None,
+            move_type: MoveType::EnPassant,
+        }
+    }
 }
 
 impl Display for Move {

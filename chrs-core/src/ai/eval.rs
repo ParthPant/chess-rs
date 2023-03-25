@@ -157,7 +157,7 @@ const MVV_LVA: [[i32; 12]; 12] = [
     [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
 ];
 
-fn score_mvv_lva(m: &Move, config: &BoardConfig) -> i32 {
+pub fn score_mvv_lva(m: &Move, config: &BoardConfig) -> i32 {
     if m.capture.is_none() {
         return 0;
     }
@@ -167,20 +167,14 @@ fn score_mvv_lva(m: &Move, config: &BoardConfig) -> i32 {
     MVV_LVA[atk as usize][victim as usize]
 }
 
-fn score_quiet_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
-    let p = config.get_at_sq(m.from).unwrap();
-    let mut score = 0;
-    if let MoveType::Promotion(Some(prom)) = m.move_type {
-        score += MATERIAL_SCORE[prom as usize];
-    }
-    if gen.is_sq_attacked(m.to, !p.get_color(), config) {
-        score -= MATERIAL_SCORE[p as usize];
-    }
-    score
-}
-
-pub fn score_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
-    let capture_score = score_mvv_lva(m, config);
-    let quiet_score = score_quiet_move(m, config, gen);
-    capture_score + quiet_score
-}
+// pub fn score_quiet_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
+//     let p = config.get_at_sq(m.from).unwrap();
+//     let mut score = 0;
+//     if let MoveType::Promotion(Some(prom)) = m.move_type {
+//         score += MATERIAL_SCORE[prom as usize];
+//     }
+//     if gen.is_sq_attacked(m.to, !p.get_color(), config) {
+//         score -= MATERIAL_SCORE[p as usize];
+//     }
+//     score
+// }

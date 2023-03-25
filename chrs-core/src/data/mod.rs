@@ -431,6 +431,7 @@ impl BoardConfig {
             self.add_piece(p, to);
         } else {
             log::error!("No Piece at {}", from);
+            log::error!("FEN {}", self.get_fen());
             self.print_board();
             panic!();
         }
