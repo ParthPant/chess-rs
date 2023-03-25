@@ -4,7 +4,8 @@ mod moves;
 pub mod piece;
 mod square;
 
-use crate::generator::MoveGenerator;
+use crate::zobrist::{hash, update_castle, update_ep, update_side};
+use crate::{generator::MoveGenerator, zobrist::update_piece};
 use fen::Fen;
 use moves::CastleType;
 use std::str::FromStr;
@@ -26,6 +27,7 @@ pub struct BoardConfig {
     fullmove_number: u32,
     pub bitboards: BoardMap,
     move_history: MoveHistory,
+    hash: u64,
 }
 
 impl Default for BoardConfig {
@@ -35,8 +37,27 @@ impl Default for BoardConfig {
 }
 
 impl BoardConfig {
+    pub fn get_hash(&self) -> u64 {
+        self.hash
+    }
+
     pub fn print_board(&self) {
         println!("{}", self.to_string());
+    }
+
+    fn set_ep_target(&mut self, t: Square) {
+        if let Some(t) = self.en_passant_target {
+            self.hash = update_ep(t, self.hash)
+        }
+        self.en_passant_target = Some(t);
+        self.hash = update_ep(t, self.hash)
+    }
+
+    fn clear_ep_target(&mut self) {
+        if let Some(t) = self.en_passant_target {
+            self.hash = update_ep(t, self.hash)
+        }
+        self.en_passant_target = None;
     }
 
     pub fn to_string(&self) -> String {
@@ -54,6 +75,7 @@ impl BoardConfig {
             s = format!("{}\n", s);
         }
         s = format!("{}   a  b  c  d  e  f  g  h", s);
+        s = format!("{}\nHash: {:x}", s, hash(self));
         s
     }
 
@@ -109,7 +131,7 @@ impl BoardConfig {
 
         // en passant state update
         if m.move_type != DoublePush {
-            self.en_passant_target = None;
+            self.clear_ep_target();
         }
         // castling state update
         if m.from == Square::A1 || m.to == Square::A1 {
@@ -137,6 +159,10 @@ impl BoardConfig {
         if self.active_color == Color::Black {
             self.fullmove_number += 1;
         }
+
+        self.hash = update_castle(prev_castle_flags.raw(), self.hash);
+        self.hash = update_castle(self.castle_flags.raw(), self.hash);
+
         self.halfmove_clock += 1;
         self.toggle_active_color();
         Some(MoveCommit::new(
@@ -159,9 +185,9 @@ impl BoardConfig {
         // self.remove_piece(to);
         self.move_piece(from, to);
         if pcolor == Color::White {
-            self.en_passant_target = Some(Square::try_from(to as usize - 8).unwrap());
+            self.set_ep_target(Square::try_from(to as usize - 8).unwrap());
         } else {
-            self.en_passant_target = Some(Square::try_from(to as usize + 8).unwrap());
+            self.set_ep_target(Square::try_from(to as usize + 8).unwrap());
         }
         None
     }
@@ -254,8 +280,15 @@ impl BoardConfig {
         if pcolor == Color::Black {
             self.fullmove_number -= 1;
         }
-        self.en_passant_target = commit.ep_target;
-        self.castle_flags.0 ^= commit.castledelta.0;
+        if let Some(t) = commit.ep_target {
+            self.set_ep_target(t);
+        } else {
+            self.clear_ep_target();
+        }
+        let oldcastleflags = self.castle_flags.0 ^ commit.castledelta.0;
+        self.hash = update_castle(self.castle_flags.raw(), self.hash);
+        self.hash = update_castle(oldcastleflags, self.hash);
+        self.castle_flags = CastleFlags(oldcastleflags);
         self.halfmove_clock -= 1;
         self.toggle_active_color();
     }
@@ -425,6 +458,10 @@ impl BoardConfig {
         ret
     }
 
+    pub fn get_castle_flags_raw(&self) -> u8 {
+        self.castle_flags.raw()
+    }
+
     fn move_piece(&mut self, from: Square, to: Square) {
         if let Some(p) = self.get_at_sq(from) {
             self.remove_piece(from);
@@ -440,6 +477,7 @@ impl BoardConfig {
     fn remove_piece(&mut self, from: Square) -> Option<BoardPiece> {
         if let Some(p) = self.get_at_sq(from) {
             self.remove_from_bitboard(p, from);
+            self.hash = update_piece(from, p, self.hash);
             Some(p)
         } else {
             None
@@ -447,11 +485,14 @@ impl BoardConfig {
     }
 
     fn add_piece(&mut self, p: BoardPiece, to: Square) {
+        self.hash = update_piece(to, p, self.hash);
         self.add_to_bitboard(p, to)
     }
 
     fn toggle_active_color(&mut self) {
+        self.hash = update_side(self.active_color, self.hash);
         self.active_color = !self.active_color;
+        self.hash = update_side(self.active_color, self.hash);
     }
 
     fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {
@@ -513,6 +554,10 @@ impl CastleFlags {
 
     pub fn unset_black_ooo(&mut self) {
         self.0 &= !(1 << 3);
+    }
+
+    pub fn raw(&self) -> u8 {
+        self.0
     }
 }
 

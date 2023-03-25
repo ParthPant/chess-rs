@@ -15,8 +15,10 @@ This section should list any major features of chess-rs
 - [x] Egui Integration
 - [x] Board Evaluation (Matrial and Positional)
 - [x] AI (NegaMax with Quiescence Search)
-- [x] Move Ordering
-- [ ] Zobrist Hashing
+- [x] Move Ordering (MVV-LVA, Killer & History Heuristics)
+- [x] Zobrist Hashing
+- [ ] Transposition Tables
+- [ ] Incremental Search Deepening (PV Search)
 - [ ] UCI Interface
 
 

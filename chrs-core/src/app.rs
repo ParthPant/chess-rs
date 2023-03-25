@@ -32,6 +32,7 @@ impl App {
 
         let mut board = Board::default();
         let config = Rc::new(RefCell::new(BoardConfig::default()));
+        config.borrow().print_board();
         // let config = Rc::new(RefCell::new(BoardConfig::from_fen_str(
         //     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
         // )));

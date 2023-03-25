@@ -2,6 +2,7 @@
 
 use chrs_core::data::{BoardConfig, BoardPiece, Color, Move, Square};
 use chrs_core::generator::MoveGenerator;
+use chrs_core::zobrist::hash;
 use std::env;
 use std::str::FromStr;
 
@@ -19,6 +20,7 @@ fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divid
 
     let mut count = 0;
     for m in moves.iter() {
+        let key_scratch = hash(config);
         if let Some(commit) = config.make_move(*m) {
             let c = perft_impl(depth - 1, config, gen, false);
             if divide {
@@ -26,6 +28,8 @@ fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divid
             }
             count += c;
             config.undo_commit(&commit);
+            let key_updated = config.get_hash();
+            assert_eq!(key_scratch, key_updated);
         }
     }
 

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::data::{BoardMap, CastleFlags};
+use crate::zobrist::hash;
 
 use super::piece::{BoardPiece, Color};
 use super::square::Square;
@@ -190,7 +191,7 @@ impl Fen {
         }
 
         log::trace!("Done..");
-        BoardConfig {
+        let mut c = BoardConfig {
             active_color,
             en_passant_target,
             castle_flags,
@@ -198,6 +199,9 @@ impl Fen {
             fullmove_number,
             bitboards,
             move_history: Default::default(),
-        }
+            hash: 0,
+        };
+        c.hash = hash(&c);
+        c
     }
 }
