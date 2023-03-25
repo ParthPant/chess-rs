@@ -22,6 +22,7 @@ pub enum MoveType {
 pub struct Move {
     pub from: Square,
     pub to: Square,
+    pub p: BoardPiece,
     pub capture: Option<BoardPiece>,
     pub move_type: MoveType,
 }
@@ -31,6 +32,7 @@ impl Default for Move {
         Self {
             from: Square::A1,
             to: Square::A1,
+            p: BoardPiece::WhitePawn,
             capture: None,
             move_type: MoveType::EnPassant,
         }
@@ -55,21 +57,35 @@ impl Display for Move {
 }
 
 impl Move {
-    pub fn new(from: Square, to: Square, capture: Option<BoardPiece>, m: MoveType) -> Self {
+    pub fn new(
+        from: Square,
+        to: Square,
+        p: BoardPiece,
+        capture: Option<BoardPiece>,
+        m: MoveType,
+    ) -> Self {
         Self {
             from,
             to,
+            p,
             capture,
             move_type: m,
         }
     }
 
-    pub fn new_prom(from: Square, to: Square, capture: Option<BoardPiece>, p: BoardPiece) -> Self {
+    pub fn new_prom(
+        from: Square,
+        to: Square,
+        p: BoardPiece,
+        capture: Option<BoardPiece>,
+        prom: BoardPiece,
+    ) -> Self {
         Self {
             from,
             to,
+            p,
             capture,
-            move_type: MoveType::Promotion(Some(p)),
+            move_type: MoveType::Promotion(Some(prom)),
         }
     }
 
@@ -77,54 +93,55 @@ impl Move {
         use MoveType::*;
 
         let p = c.get_at_sq(from).unwrap();
-        let mut m: MoveType = Normal;
+        let mut move_type: MoveType = Normal;
         let mut capture = c.get_at_sq(to);
 
         // Castling
         if p == BoardPiece::WhiteKing {
             if from == Square::E1 && to == Square::G1 {
-                m = Castle(CastleType::KingSide);
+                move_type = Castle(CastleType::KingSide);
             } else if from == Square::E1 && to == Square::C1 {
-                m = Castle(CastleType::QueenSide);
+                move_type = Castle(CastleType::QueenSide);
             }
         } else if p == BoardPiece::BlackKing {
             if from == Square::E8 && to == Square::G8 {
-                m = Castle(CastleType::KingSide);
+                move_type = Castle(CastleType::KingSide);
             } else if from == Square::E8 && to == Square::C8 {
-                m = Castle(CastleType::QueenSide);
+                move_type = Castle(CastleType::QueenSide);
             }
         }
         // Pawn: Double Push, En Passant and Promotion
         else if p == BoardPiece::WhitePawn {
             if to as usize - from as usize == 16 {
-                m = DoublePush;
+                move_type = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
                     capture = c.get_at_sq(Square::try_from(t as usize - 8).unwrap());
-                    m = EnPassant;
+                    move_type = EnPassant;
                 }
             }
             if to >= Square::A8 {
-                m = Promotion(None);
+                move_type = Promotion(None);
             }
         } else if p == BoardPiece::BlackPawn {
             if from as usize - to as usize == 16 {
-                m = DoublePush;
+                move_type = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
                     capture = c.get_at_sq(Square::try_from(t as usize + 8).unwrap());
-                    m = EnPassant;
+                    move_type = EnPassant;
                 }
             }
             if to <= Square::H1 {
-                m = Promotion(None)
+                move_type = Promotion(None)
             }
         }
         Self {
             from,
             to,
+            p,
             capture,
-            move_type: m,
+            move_type,
         }
     }
 
@@ -152,8 +169,6 @@ impl Move {
 #[derive(Debug, Copy, Clone)]
 pub struct MoveCommit {
     pub m: Move,
-    pub p: BoardPiece,
-    pub captured: Option<BoardPiece>,
     pub ep_target: Option<Square>,
     pub castledelta: CastleFlags,
 }
@@ -163,8 +178,8 @@ impl Display for MoveCommit {
         use MoveType::*;
         if self.m.move_type == EnPassant {
             return write!(f, "{}{}e.p.", self.m.from, self.m.to);
-        } else if let Some(_) = self.captured {
-            return write!(f, "{}{}x{}", self.p, self.m.from, self.m.to);
+        } else if let Some(_) = self.m.capture {
+            return write!(f, "{}{}x{}", self.m.p, self.m.from, self.m.to);
         } else if self.m.move_type == Castle(CastleType::KingSide) {
             return write!(f, "0-0");
         } else if self.m.move_type == Castle(CastleType::QueenSide) {
@@ -172,23 +187,15 @@ impl Display for MoveCommit {
         } else if let Promotion(Some(p)) = self.m.move_type {
             return write!(f, "{}{}", self.m.to, p);
         } else {
-            return write!(f, "{}{}{}", self.p, self.m.from, self.m.to);
+            return write!(f, "{}{}{}", self.m.p, self.m.from, self.m.to);
         }
     }
 }
 
 impl MoveCommit {
-    pub fn new(
-        m: Move,
-        p: BoardPiece,
-        captured: Option<BoardPiece>,
-        ep_target: Option<Square>,
-        castledelta: CastleFlags,
-    ) -> Self {
+    pub fn new(m: Move, ep_target: Option<Square>, castledelta: CastleFlags) -> Self {
         Self {
             m,
-            p,
-            captured,
             ep_target,
             castledelta,
         }

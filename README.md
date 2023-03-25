@@ -17,7 +17,7 @@ This section should list any major features of chess-rs
 - [x] AI (NegaMax with Quiescence Search)
 - [x] Move Ordering (MVV-LVA, Killer & History Heuristics)
 - [x] Zobrist Hashing
-- [ ] Transposition Tables
+- [x] Transposition Tables
 - [ ] Incremental Search Deepening (PV Search)
 - [ ] UCI Interface
 

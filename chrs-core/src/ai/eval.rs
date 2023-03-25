@@ -157,11 +157,11 @@ const MVV_LVA: [[i32; 12]; 12] = [
     [100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600],
 ];
 
-pub fn score_mvv_lva(m: &Move, config: &BoardConfig) -> i32 {
+pub fn score_mvv_lva(m: &Move) -> i32 {
     if m.capture.is_none() {
         return 0;
     }
-    let atk = config.get_at_sq(m.from).unwrap();
+    let atk = m.p;
     let victim = m.capture.unwrap();
 
     MVV_LVA[atk as usize][victim as usize]

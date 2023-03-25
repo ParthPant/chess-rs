@@ -316,25 +316,25 @@ impl MoveGenerator {
         while moves.data() > 0 {
             let to = moves.pop_sq().unwrap();
             let m = Move::infer(from, to, c);
-            let p = c.get_at_sq(from).unwrap();
+            let p = m.p;
             if m.is_prom() {
                 use BoardPiece::*;
                 match p.get_color() {
                     Color::White => {
-                        let m = Move::new_prom(from, to, m.capture, WhiteRook);
+                        let m = Move::new_prom(from, to, p, m.capture, WhiteRook);
                         if self.is_legal(m, c, p.get_color()) {
                             list.add(m);
-                            list.add(Move::new_prom(from, to, m.capture, WhiteBishop));
-                            list.add(Move::new_prom(from, to, m.capture, WhiteKnight));
-                            list.add(Move::new_prom(from, to, m.capture, WhiteQueen));
+                            list.add(Move::new_prom(from, to, p, m.capture, WhiteBishop));
+                            list.add(Move::new_prom(from, to, p, m.capture, WhiteKnight));
+                            list.add(Move::new_prom(from, to, p, m.capture, WhiteQueen));
                         }
                     }
                     Color::Black => {
-                        let m = Move::new_prom(from, to, m.capture, BlackRook);
+                        let m = Move::new_prom(from, to, p, m.capture, BlackRook);
                         if self.is_legal(m, c, p.get_color()) {
-                            list.add(Move::new_prom(from, to, m.capture, BlackBishop));
-                            list.add(Move::new_prom(from, to, m.capture, BlackKnight));
-                            list.add(Move::new_prom(from, to, m.capture, BlackQueen));
+                            list.add(Move::new_prom(from, to, p, m.capture, BlackBishop));
+                            list.add(Move::new_prom(from, to, p, m.capture, BlackKnight));
+                            list.add(Move::new_prom(from, to, p, m.capture, BlackQueen));
                         }
                     }
                 }
