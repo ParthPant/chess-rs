@@ -253,6 +253,7 @@ dependencies = [
  "pixels",
  "pretty_env_logger",
  "rand",
+ "rand_chacha",
  "resvg",
  "strum",
  "strum_macros",

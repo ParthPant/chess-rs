@@ -1,6 +1,6 @@
 use crate::data::{BoardConfig, BoardPiece, Color, Square};
+use crate::prng::*;
 use lazy_static::lazy_static;
-use rand;
 
 lazy_static! {
     pub static ref PIECE_KEYS: [[u64; 12]; 64] = {
@@ -35,10 +35,6 @@ lazy_static! {
         t
     };
     pub static ref BLACK_TO_MOVE: u64 = random_u64();
-}
-
-fn random_u64() -> u64 {
-    rand::random::<u64>()
 }
 
 pub fn hash(config: &BoardConfig) -> u64 {

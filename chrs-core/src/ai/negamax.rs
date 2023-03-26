@@ -18,7 +18,7 @@ pub struct NegaMaxAI {
 impl Default for NegaMaxAI {
     fn default() -> Self {
         Self {
-            depth: 5,
+            depth: 3,
             stats: Default::default(),
             killer_moves: [[Move::default(); Self::MAX_DEPTH]; 2],
             history_moves: [[0; 64]; 12],
@@ -141,9 +141,7 @@ impl NegaMaxAI {
         if eval >= beta {
             return beta;
         }
-        if alpha < eval {
-            alpha = eval;
-        }
+        alpha = i32::max(alpha, eval);
 
         let mut moves = gen.gen_all_moves(config.get_active_color(), &config, true);
         moves

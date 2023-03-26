@@ -1,5 +1,5 @@
 use crate::data::{BitBoard, BoardPiece, Color};
-use rand;
+use crate::prng::*;
 
 pub const NOT_A_FILE: u64 = {
     let mut x: u64 = 0;
@@ -196,10 +196,6 @@ pub fn find_magic(sq: usize, slider: BoardPiece) -> (MagicEntry, Vec<BitBoard>) 
             return (magic_entry, table);
         }
     }
-}
-
-fn random_u64() -> u64 {
-    rand::random::<u64>()
 }
 
 const fn bishop_relevant_occupancy(sq: usize) -> u64 {

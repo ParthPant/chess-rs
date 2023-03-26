@@ -19,6 +19,7 @@ This section should list any major features of chess-rs
 - [x] Zobrist Hashing
 - [x] Transposition Tables
 - [ ] Incremental Search Deepening (PV Search)
+- [ ] Opening Book
 - [ ] UCI Interface
 
 

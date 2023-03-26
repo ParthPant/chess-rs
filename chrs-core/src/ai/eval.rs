@@ -1,7 +1,4 @@
-use crate::{
-    data::{BoardConfig, BoardPiece, Color, Move, MoveType, Square},
-    generator::MoveGenerator,
-};
+use crate::data::{BoardConfig, BoardPiece, Color, Move, Square};
 use strum::IntoEnumIterator;
 
 const MATERIAL_SCORE: [i32; 12] = [

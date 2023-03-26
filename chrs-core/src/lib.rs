@@ -6,4 +6,5 @@ pub mod generator;
 pub mod zobrist;
 
 mod cache;
+mod prng;
 mod ui;
