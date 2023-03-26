@@ -16,4 +16,5 @@ pub trait AI {
 pub struct AIStat {
     node_count: usize,
     time: Duration,
+    max_depth: usize,
 }

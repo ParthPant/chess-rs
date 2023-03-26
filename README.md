@@ -18,9 +18,9 @@ This section should list any major features of chess-rs
 - [x] Move Ordering (MVV-LVA, Killer & History Heuristics)
 - [x] Zobrist Hashing
 - [x] Transposition Tables
-- [ ] Incremental Search Deepening (PV Search)
+- [x] Incremental Search Deepening
 - [ ] Opening Book
-- [ ] UCI Interface
+- [ ] Separate UI from Core
 
 
 ## Getting Started

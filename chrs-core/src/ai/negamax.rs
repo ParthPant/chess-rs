@@ -9,20 +9,30 @@ use std::time::Instant;
 
 pub struct NegaMaxAI {
     depth: usize,
+    quiescence_depth: usize,
     stats: AIStat,
-    killer_moves: [[Move; Self::MAX_DEPTH]; 2],
+    killer_moves: [[Option<Move>; Self::MAX_DEPTH]; 2],
     history_moves: [[i32; 64]; 12],
     table: TT,
+    pv_length: [usize; 64],
+    pv_table: [[Option<Move>; 64]; 64],
+    score_pv: bool,
+    follow_pv: bool,
 }
 
 impl Default for NegaMaxAI {
     fn default() -> Self {
         Self {
-            depth: 3,
+            depth: 5,
+            quiescence_depth: 4,
             stats: Default::default(),
-            killer_moves: [[Move::default(); Self::MAX_DEPTH]; 2],
-            history_moves: [[0; 64]; 12],
+            killer_moves: [[None; Self::MAX_DEPTH]; 2],
+            history_moves: [[0; Self::MAX_DEPTH]; 12],
             table: Default::default(),
+            pv_length: [0; Self::MAX_DEPTH],
+            pv_table: [[None; Self::MAX_DEPTH]; Self::MAX_DEPTH],
+            score_pv: false,
+            follow_pv: false,
         }
     }
 }
@@ -32,13 +42,18 @@ impl NegaMaxAI {
     const MAX: i32 = 50000;
     const MAX_DEPTH: usize = 64;
 
-    fn score_move(&self, m: &Move, ply: usize) -> i32 {
+    fn score_move(&mut self, m: &Move, ply: usize) -> i32 {
+        if self.score_pv && self.pv_table[0][ply] == Some(*m) {
+            self.score_pv = false;
+            self.follow_pv = true;
+            return 20000;
+        }
         if m.capture.is_some() {
             return score_mvv_lva(m);
         } else {
-            if self.killer_moves[0][ply] == *m {
+            if self.killer_moves[0][ply] == Some(*m) {
                 return 9000;
-            } else if self.killer_moves[1][ply] == *m {
+            } else if self.killer_moves[1][ply] == Some(*m) {
                 return 8000;
             } else {
                 return self.history_moves[m.p as usize][m.to as usize];
@@ -55,8 +70,11 @@ impl NegaMaxAI {
         depth: usize,
         ply: usize,
     ) -> i32 {
-        let alpha_orig = alpha;
+        self.stats.node_count += 1;
+        self.stats.max_depth = usize::max(self.stats.max_depth, depth);
+        self.pv_length[ply] = ply;
 
+        let alpha_orig = alpha;
         if let Some(entry) = self.table.get(&config.get_hash()) {
             if entry.depth >= depth {
                 match entry.flag {
@@ -72,17 +90,26 @@ impl NegaMaxAI {
         }
 
         if depth == 0 {
-            // return evaluate(config);
-            return self.quiescence(config, gen, alpha, beta, ply + 1);
+            return self.quiescence(config, gen, alpha, beta, self.quiescence_depth, ply + 1);
         }
         if ply > Self::MAX_DEPTH - 1 {
             return evaluate(config);
         }
 
-        self.stats.node_count += 1;
-
         let mut value = Self::MIN;
         let mut moves = gen.gen_all_moves(config.get_active_color(), &config, false);
+        if self.follow_pv {
+            if moves
+                .data()
+                .iter()
+                .any(|m| self.pv_table[0][ply] == Some(*m))
+            {
+                self.score_pv = true;
+                self.follow_pv = true;
+            } else {
+                self.follow_pv = false;
+            }
+        }
         moves
             .data()
             .sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));
@@ -94,15 +121,24 @@ impl NegaMaxAI {
                     -self.nega_max(config, gen, -beta, -alpha, depth - 1, ply + 1),
                 );
                 config.undo_commit(&commit);
-                if alpha >= beta {
+
+                if value >= beta {
                     if m.capture.is_none() {
                         self.killer_moves[1][ply] = self.killer_moves[0][ply];
-                        self.killer_moves[0][ply] = *m;
+                        self.killer_moves[0][ply] = Some(*m);
                     }
                     break;
                 }
+
                 if value > alpha {
                     alpha = value;
+
+                    self.pv_table[ply][ply] = Some(*m);
+                    for next_ply in (ply + 1)..self.pv_length[ply + 1] {
+                        self.pv_table[ply][next_ply] = self.pv_table[ply + 1][next_ply];
+                    }
+                    self.pv_length[ply] = self.pv_length[ply + 1];
+
                     if m.capture.is_none() {
                         self.history_moves[m.p as usize][m.to as usize] += (depth * depth) as i32;
                     }
@@ -133,11 +169,15 @@ impl NegaMaxAI {
         gen: &MoveGenerator,
         mut alpha: i32,
         beta: i32,
+        depth: usize,
         ply: usize,
     ) -> i32 {
         self.stats.node_count += 1;
 
         let eval = evaluate(config);
+        if depth == 0 {
+            return eval;
+        }
         if eval >= beta {
             return beta;
         }
@@ -151,7 +191,7 @@ impl NegaMaxAI {
         for m in moves.iter() {
             assert!(m.capture.is_some());
             if let Some(commit) = config.make_move(*m) {
-                let score = -self.quiescence(config, gen, -beta, -alpha, ply + 1);
+                let score = -self.quiescence(config, gen, -beta, -alpha, depth - 1, ply + 1);
                 config.undo_commit(&commit);
                 if score >= beta {
                     return beta;
@@ -167,26 +207,24 @@ impl AI for NegaMaxAI {
     fn get_best_move(&mut self, config: &BoardConfig, gen: &MoveGenerator) -> Option<Move> {
         self.stats = Default::default();
         self.history_moves = [[0; 64]; 12];
-        self.killer_moves = [[Move::default(); Self::MAX_DEPTH]; 2];
+        self.killer_moves = [[None; Self::MAX_DEPTH]; 2];
+        self.pv_length = [0; 64];
+        self.pv_table = [[None; 64]; 64];
+        self.score_pv = false;
+        self.follow_pv = false;
 
-        let mut best = None;
-        let mut best_score = Self::MIN;
         let mut config = config.clone();
-        let moves = gen.gen_all_moves(config.get_active_color(), &config, false);
         let now = Instant::now();
-        for m in moves.iter() {
-            if let Some(commit) = config.make_move(*m) {
-                let score =
-                    -self.nega_max(&mut config, gen, Self::MIN, Self::MAX, self.depth - 1, 1);
-                if score >= best_score {
-                    best_score = score;
-                    best = Some(*m);
-                }
-                config.undo_commit(&commit);
-            }
+
+        for current_depth in 1..(self.depth + 1) {
+            self.follow_pv = true;
+            self.stats.node_count = 0;
+            self.nega_max(&mut config, gen, Self::MIN, Self::MAX, current_depth, 0);
         }
+        // self.nega_max(&mut config, gen, Self::MIN, Self::MAX, self.depth, 0);
+
         self.stats.time = now.elapsed();
-        best
+        self.pv_table[0][0]
     }
 
     fn get_stats(&self) -> AIStat {

@@ -41,18 +41,7 @@ impl Default for Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        use MoveType::*;
-        if let Promotion(Some(p)) = self.move_type {
-            write!(
-                f,
-                "{}{}{}",
-                self.from,
-                self.to,
-                p.to_string().to_lowercase()
-            )
-        } else {
-            write!(f, "{}{}", self.from, self.to)
-        }
+        write!(f, "{}{}", self.from, self.to)
     }
 }
 

@@ -163,15 +163,3 @@ pub fn score_mvv_lva(m: &Move) -> i32 {
 
     MVV_LVA[atk as usize][victim as usize]
 }
-
-// pub fn score_quiet_move(m: &Move, config: &BoardConfig, gen: &MoveGenerator) -> i32 {
-//     let p = config.get_at_sq(m.from).unwrap();
-//     let mut score = 0;
-//     if let MoveType::Promotion(Some(prom)) = m.move_type {
-//         score += MATERIAL_SCORE[prom as usize];
-//     }
-//     if gen.is_sq_attacked(m.to, !p.get_color(), config) {
-//         score -= MATERIAL_SCORE[p as usize];
-//     }
-//     score
-// }
