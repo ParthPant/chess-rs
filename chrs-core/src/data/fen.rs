@@ -168,7 +168,7 @@ impl Fen {
                     }
                 }
                 4 => {
-                    if let Ok(n) = data.parse::<u32>() {
+                    if let Ok(n) = data.parse::<u8>() {
                         halfmove_clock = n;
                     } else {
                         log::error!("Fen Error: {} is invalid halfmove", data);
@@ -176,7 +176,7 @@ impl Fen {
                     }
                 }
                 5 => {
-                    if let Ok(n) = data.parse::<u32>() {
+                    if let Ok(n) = data.parse::<u8>() {
                         fullmove_number = n;
                     } else {
                         log::error!("Fen Error: {} is invalid fullmove", data);
@@ -199,6 +199,7 @@ impl Fen {
             fullmove_number,
             bitboards,
             move_history: Default::default(),
+            mate: None,
             hash: 0,
         };
         c.hash = hash(&c);

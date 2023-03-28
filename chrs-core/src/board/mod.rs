@@ -4,7 +4,10 @@ use crate::cache::Cache;
 use crate::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
 use crate::generator::MoveGenerator;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
-use fontdue;
+use fontdue::{
+    layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings, TextStyle},
+    Font,
+};
 use resvg::{tiny_skia, usvg};
 
 const W_PROM_OPTS: [BoardPiece; 4] = [
@@ -29,13 +32,13 @@ pub struct Board {
     ruler_color: [u8; 4],
     highlight_color: [u8; 4],
     red_highlight_color: [u8; 4],
-    font: fontdue::Font,
+    font: Font,
     glyph_cache: Cache<usvg::Tree>,
     raster_cache: Cache<tiny_skia::Pixmap>,
     picked_piece: Option<Square>,
     mouse_state: MouseState,
     user_move: Option<Move>,
-    prom_choice_xywh: (f32, f32, f32, f32),
+    overlay_xywh: (f32, f32, f32, f32),
 }
 
 impl Default for Board {
@@ -59,7 +62,7 @@ impl Default for Board {
             mouse_state: MouseState::default(),
             picked_piece: None,
             user_move: None,
-            prom_choice_xywh: (size/2.0-2.0*check_side, size/2.0-0.5*check_side, 4.0*check_side, check_side),
+            overlay_xywh: (size/2.0-2.0*check_side, size/2.0-0.5*check_side, 4.0*check_side, check_side),
         }
     }
 }
@@ -78,13 +81,13 @@ impl Board {
     }
 
     fn get_pos_prom_box(&self, pos: &(usize, usize)) -> Option<(usize, usize)> {
-        let inside = pos.0 > self.prom_choice_xywh.0 as usize
-            && pos.0 < (self.prom_choice_xywh.0 + self.prom_choice_xywh.2) as usize
-            && pos.1 > self.prom_choice_xywh.1 as usize
-            && pos.1 < (self.prom_choice_xywh.1 + self.prom_choice_xywh.3) as usize;
+        let inside = pos.0 > self.overlay_xywh.0 as usize
+            && pos.0 < (self.overlay_xywh.0 + self.overlay_xywh.2) as usize
+            && pos.1 > self.overlay_xywh.1 as usize
+            && pos.1 < (self.overlay_xywh.1 + self.overlay_xywh.3) as usize;
         if inside {
-            let x = pos.0 - self.prom_choice_xywh.0 as usize;
-            let y = pos.1 - self.prom_choice_xywh.1 as usize;
+            let x = pos.0 - self.overlay_xywh.0 as usize;
+            let y = pos.1 - self.overlay_xywh.1 as usize;
             return Some((x, y));
         }
         None
@@ -93,12 +96,16 @@ impl Board {
     pub fn handle_event(&mut self, e: BoardEvent, config: &BoardConfig) {
         self.update_mouse_state(e);
 
+        if let Some(_) = config.get_mate() {
+            return;
+        }
+
         if let Some(m) = &self.user_move {
             if m.is_empty_prom() {
                 if self.mouse_state.get_is_left_pressed() {
                     let pos = self.mouse_state.get_pos();
                     if let Some((x, _)) = self.get_pos_prom_box(&pos) {
-                        let i = x / self.prom_choice_xywh.3 as usize;
+                        let i = x / self.overlay_xywh.3 as usize;
                         let prom = match config.get_active_color() {
                             Color::White => W_PROM_OPTS[i],
                             Color::Black => B_PROM_OPTS[i],
@@ -285,10 +292,8 @@ impl Board {
 
         if let Some(m) = self.user_move {
             if m.is_empty_prom() {
-                let transform = tiny_skia::Transform::from_translate(
-                    self.prom_choice_xywh.0,
-                    self.prom_choice_xywh.1,
-                );
+                let transform =
+                    tiny_skia::Transform::from_translate(self.overlay_xywh.0, self.overlay_xywh.1);
                 self.draw_prom_choice(config.get_active_color(), transform, &mut pixmap);
             }
         }
@@ -308,6 +313,17 @@ impl Board {
             );
             let fit = usvg::FitTo::Width(glyph_width);
             resvg::render(&tree, fit, transform, pixmap.as_mut());
+        }
+
+        if let Some(mate) = config.get_mate() {
+            let transform =
+                tiny_skia::Transform::from_translate(self.overlay_xywh.0, self.overlay_xywh.1);
+            self.draw_text(
+                &format!("Check Mate: {}", mate),
+                32.0,
+                transform,
+                &mut pixmap,
+            )
         }
 
         frame.copy_from_slice(pixmap.data());
@@ -393,11 +409,8 @@ impl Board {
         pixmap: &mut tiny_skia::Pixmap,
     ) {
         let check_side = self.get_check_side();
-        let mut pm = tiny_skia::Pixmap::new(
-            self.prom_choice_xywh.2 as u32,
-            self.prom_choice_xywh.3 as u32,
-        )
-        .unwrap();
+        let mut pm =
+            tiny_skia::Pixmap::new(self.overlay_xywh.2 as u32, self.overlay_xywh.3 as u32).unwrap();
         let glyph_width = (check_side * 0.75) as u32;
 
         let pieces = match color {
@@ -414,6 +427,66 @@ impl Board {
             );
             let fit = usvg::FitTo::Width(glyph_width);
             resvg::render(&tree, fit, glyph_t, pm.as_mut());
+        }
+
+        pixmap.draw_pixmap(
+            0,
+            0,
+            pm.as_ref(),
+            &tiny_skia::PixmapPaint::default(),
+            t,
+            None,
+        );
+    }
+
+    fn draw_text(
+        &mut self,
+        s: &str,
+        px: f32,
+        t: tiny_skia::Transform,
+        pixmap: &mut tiny_skia::Pixmap,
+    ) {
+        let mut pm =
+            tiny_skia::Pixmap::new(self.overlay_xywh.2 as u32, self.overlay_xywh.3 as u32).unwrap();
+        // pm.fill(tiny_skia::Color::WHITE);
+
+        let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+        layout.reset(&LayoutSettings {
+            x: 0.0,
+            y: 0.0,
+            max_width: Some(self.overlay_xywh.2),
+            max_height: Some(self.overlay_xywh.3),
+            horizontal_align: HorizontalAlign::Center,
+            ..LayoutSettings::default()
+        });
+        layout.append(&[&self.font], &TextStyle::new(s, px, 0));
+
+        for glyph in layout.glyphs() {
+            let (_, bitmap) = self.font.rasterize_indexed(glyph.key.glyph_index, px);
+            let mut bitmap: Vec<u8> = bitmap
+                .into_iter()
+                .map(|x| vec![0, 0, 0, x])
+                .flatten()
+                .collect();
+
+            if glyph.char_data.is_whitespace() {
+                continue;
+            }
+            let x = tiny_skia::PixmapMut::from_bytes(
+                &mut bitmap,
+                glyph.width as u32,
+                glyph.height as u32,
+            )
+            .unwrap()
+            .to_owned();
+            pm.draw_pixmap(
+                glyph.x as i32,
+                glyph.y as i32,
+                x.as_ref(),
+                &tiny_skia::PixmapPaint::default(),
+                tiny_skia::Transform::identity(),
+                None,
+            );
         }
 
         pixmap.draw_pixmap(

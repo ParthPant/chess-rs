@@ -12,7 +12,6 @@ pub enum SearchFlag {
 
 #[derive(Debug, Default)]
 pub struct TTEntry {
-    pub key: u64,
     pub depth: usize,
     pub flag: SearchFlag,
     pub best: Option<Move>,

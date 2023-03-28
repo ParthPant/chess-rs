@@ -40,6 +40,7 @@ impl Default for NegaMaxAI {
 impl NegaMaxAI {
     const MIN: i32 = -50000;
     const MAX: i32 = 50000;
+    const MATING_SCORE: i32 = -49000;
     const MAX_DEPTH: usize = 64;
 
     fn score_move(&mut self, m: &Move, ply: usize) -> i32 {
@@ -78,7 +79,14 @@ impl NegaMaxAI {
         if let Some(entry) = self.table.get(&config.get_hash()) {
             if entry.depth >= depth {
                 match entry.flag {
-                    SearchFlag::Exact => return entry.value,
+                    SearchFlag::Exact => {
+                        self.pv_table[ply][ply] = entry.best;
+                        for next_ply in (ply + 1)..self.pv_length[ply + 1] {
+                            self.pv_table[ply][next_ply] = self.pv_table[ply + 1][next_ply];
+                        }
+                        self.pv_length[ply] = self.pv_length[ply + 1];
+                        return entry.value;
+                    }
                     SearchFlag::Lowerbound => alpha = i32::max(alpha, entry.value),
                     SearchFlag::Upperbound => beta = i32::min(beta, entry.value),
                 };
@@ -96,6 +104,7 @@ impl NegaMaxAI {
             return evaluate(config);
         }
 
+        let in_check = config.is_king_in_check(gen, config.get_active_color());
         let mut value = Self::MIN;
         let mut moves = gen.gen_all_moves(config.get_active_color(), &config, false);
         if self.follow_pv {
@@ -146,6 +155,14 @@ impl NegaMaxAI {
             }
         }
 
+        if moves.len() == 0 {
+            if in_check {
+                return Self::MATING_SCORE + ply as i32;
+            } else {
+                return 0;
+            }
+        }
+
         let entry = self
             .table
             .entry(config.get_hash())
@@ -158,6 +175,7 @@ impl NegaMaxAI {
         } else {
             entry.flag = SearchFlag::Exact;
         }
+        entry.best = self.pv_table[ply][ply];
         entry.depth = depth;
 
         value
@@ -173,6 +191,7 @@ impl NegaMaxAI {
         ply: usize,
     ) -> i32 {
         self.stats.node_count += 1;
+        self.stats.max_depth = usize::max(self.stats.max_depth, depth);
 
         let eval = evaluate(config);
         if depth == 0 {

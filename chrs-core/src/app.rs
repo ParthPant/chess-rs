@@ -106,13 +106,14 @@ impl App {
                     }
                 }
                 Event::MainEventsCleared => {
-                    if config.borrow().get_active_color() == Color::Black {
+                    let turn = config.borrow().get_active_color();
+                    if turn == Color::Black {
                         let ai_move = ai.get_best_move(&config.borrow(), &generator);
                         if let Some(ai_move) = ai_move {
                             log::info!("AI response {:?}", ai.get_stats());
                             config.borrow_mut().apply_move(ai_move);
                         } else {
-                            log::info!("AI Was not able to generate Move");
+                            log::info!("AI did not generate any move");
                         }
                     } else {
                         if let Some(user_move) = board.get_user_move() {
@@ -128,14 +129,13 @@ impl App {
                             picked_sq = sq;
                             if let Some(sq) = sq {
                                 let p = config.borrow().get_at_sq(sq).unwrap();
-                                // let start = Instant::now();
                                 moves =
                                     generator.gen_piece_moves(p, sq, &(*config).borrow(), false);
-                                // let duration = start.elapsed();
-                                // log::debug!("Generated {} moves in {:?}", moves.len(), duration)
                             }
                         }
                     }
+                    config.borrow_mut().check_for_mate(&generator, turn);
+                    config.borrow_mut().check_for_mate(&generator, !turn);
                     window.request_redraw();
                 }
                 Event::RedrawRequested(_) => {

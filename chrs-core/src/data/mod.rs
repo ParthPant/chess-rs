@@ -23,10 +23,11 @@ pub struct BoardConfig {
     active_color: Color,
     en_passant_target: Option<Square>,
     castle_flags: CastleFlags,
-    halfmove_clock: u32,
-    fullmove_number: u32,
+    halfmove_clock: u8,
+    fullmove_number: u8,
     pub bitboards: BoardMap,
-    move_history: MoveHistory,
+    move_history: Box<MoveHistory>,
+    mate: Option<Color>,
     hash: u64,
 }
 
@@ -43,6 +44,14 @@ impl BoardConfig {
 
     pub fn print_board(&self) {
         println!("{}", self.to_string());
+    }
+
+    fn set_mate(&mut self, c: Color) {
+        self.mate = Some(c);
+    }
+
+    pub fn get_mate(&self) -> Option<Color> {
+        self.mate
     }
 
     fn set_ep_target(&mut self, t: Square) {
@@ -100,6 +109,18 @@ impl BoardConfig {
             return gen.is_sq_attacked(sq, !side, &self);
         }
         false
+    }
+
+    pub fn check_for_mate(&mut self, gen: &MoveGenerator, side: Color) {
+        let sq = match side {
+            Color::White => self.bitboards[BoardPiece::WhiteKing as usize].peek(),
+            Color::Black => self.bitboards[BoardPiece::BlackKing as usize].peek(),
+        };
+        let is_attacked = gen.is_sq_attacked(sq.unwrap(), !side, &self);
+        let can_move = gen.gen_all_moves(side, &self, false).len() > 0;
+        if is_attacked && !can_move {
+            self.set_mate(side);
+        }
     }
 
     pub fn make_move(&mut self, m: Move) -> Option<MoveCommit> {
@@ -392,11 +413,11 @@ impl BoardConfig {
         self.en_passant_target
     }
 
-    pub fn get_halfmove_clock(&self) -> u32 {
+    pub fn get_halfmove_clock(&self) -> u8 {
         self.halfmove_clock
     }
 
-    pub fn get_fullmove_number(&self) -> u32 {
+    pub fn get_fullmove_number(&self) -> u8 {
         self.fullmove_number
     }
 

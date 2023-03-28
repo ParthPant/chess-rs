@@ -193,15 +193,15 @@ impl MoveCommit {
 
 #[derive(Debug, Clone)]
 pub struct MoveHistory {
-    list: Box<[Option<MoveCommit>; 255]>,
-    counter: usize,
-    capacity: usize,
+    list: [Option<MoveCommit>; 255],
+    counter: u8,
+    capacity: u8,
 }
 
 impl Default for MoveHistory {
     fn default() -> Self {
         MoveHistory {
-            list: Box::new([None; 255]),
+            list: [None; 255],
             counter: 0,
             capacity: 255,
         }
@@ -215,12 +215,12 @@ impl MoveHistory {
             panic!();
         }
         self.counter += 1;
-        self.list[self.counter] = Some(m);
+        self.list[self.counter as usize] = Some(m);
     }
 
     pub fn pop(&mut self) -> Option<MoveCommit> {
-        let r = self.list[self.counter];
-        self.list[self.counter] = None;
+        let r = self.list[self.counter as usize];
+        self.list[self.counter as usize] = None;
         if self.counter > 0 {
             self.counter -= 1;
         }
@@ -228,7 +228,7 @@ impl MoveHistory {
     }
 
     pub fn get_last(&self) -> Option<MoveCommit> {
-        self.list[self.counter]
+        self.list[self.counter as usize]
     }
 }
 
