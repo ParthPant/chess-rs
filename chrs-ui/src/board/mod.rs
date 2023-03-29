@@ -1,8 +1,8 @@
 pub mod events;
 
 use crate::cache::Cache;
-use crate::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
-use crate::generator::MoveGenerator;
+use chrs_core::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
+use chrs_core::generator::MoveGenerator;
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue::{
     layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings, TextStyle},

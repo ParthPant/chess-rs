@@ -1,8 +1,8 @@
-use crate::ai::{NegaMaxAI, AI};
 use crate::board::{events::BoardEvent, Board};
-use crate::data::{BoardConfig, Color, MoveList, Square};
-use crate::generator::MoveGenerator;
 use crate::ui::GuiFramework;
+use chrs_core::ai::{NegaMaxAI, AI};
+use chrs_core::data::{BoardConfig, Color, MoveList, Square};
+use chrs_core::generator::MoveGenerator;
 
 use log;
 use pixels::{Error, Pixels, SurfaceTexture};

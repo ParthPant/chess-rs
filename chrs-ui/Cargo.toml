@@ -1,0 +1,17 @@
+[package]
+name = "chrs-ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrs-core = {path = "../chrs-core"}
+
+log = "0.4.17"
+pretty_env_logger = "0.4.0"
+winit = "0.27.5"
+pixels = "0.11.0"
+resvg = "0.29.0"
+egui = "0.20.0"
+egui-winit = "0.20.1"
+egui-wgpu = "0.20.0"
+fontdue = "0.7.2"

@@ -6,8 +6,6 @@ chess-rs is a Chess Engine written from scratch in Rust.
 
 ### Features
 
-This section should list any major features of chess-rs
-
 - [x] Move Generation using BitBoards (~17s perft results at depth 6 for starting position)
 - [x] Supports all moves including en-passant, pawn promotion and castling
 - [x] GUI gameplay
@@ -20,7 +18,6 @@ This section should list any major features of chess-rs
 - [x] Transposition Tables
 - [x] Incremental Search Deepening
 - [ ] Opening Book
-- [ ] Separate UI from Core
 
 
 ## Getting Started
@@ -43,7 +40,7 @@ cargo build
 
 ```
 # You can either start the Chess Engine with
-cargo run -p chrs-core
+cargo run -p chrs-ui
 
 # Or you can run perft analysis
 cargo run -p chrs-perft -- 5 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

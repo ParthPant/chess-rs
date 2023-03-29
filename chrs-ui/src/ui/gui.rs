@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::data::BoardConfig;
-use crate::data::Color;
+use chrs_core::data::BoardConfig;
+use chrs_core::data::Color;
 use egui::{Color32, Context};
 
 pub(super) struct Gui {

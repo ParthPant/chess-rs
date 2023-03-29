@@ -1,9 +1,13 @@
 #![allow(warnings, unused)]
+mod app;
+mod board;
+mod cache;
+mod ui;
 
 use pixels::Error;
 use pretty_env_logger;
 
-use chrs_core::app::App;
+use app::App;
 
 fn main() -> Result<(), Error> {
     std::env::set_var("RUST_BACKTRACE", "1");
