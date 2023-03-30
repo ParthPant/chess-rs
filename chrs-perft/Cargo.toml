@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chrs-core = {path = "../chrs-core"}
+chrs-lib = {path = "../chrs-lib"}

@@ -1,0 +1,5 @@
+[build]
+target = "chrs/index.html"
+release = false
+dist = "dist"
+filehash = true

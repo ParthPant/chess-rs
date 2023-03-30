@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use chrs_core::ai::NegaMaxAI;
-use chrs_core::data::BoardConfig;
-use chrs_core::data::Color;
+use chrs_lib::ai::NegaMaxAI;
+use chrs_lib::data::BoardConfig;
+use chrs_lib::data::Color;
 use egui::Slider;
 use egui::{Color32, Context};
 

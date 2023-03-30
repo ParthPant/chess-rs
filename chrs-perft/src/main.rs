@@ -1,8 +1,8 @@
 #![allow(warnings, unused)]
 
-use chrs_core::data::{BoardConfig, BoardPiece, Color, Move, Square};
-use chrs_core::generator::MoveGenerator;
-use chrs_core::zobrist::hash;
+use chrs_lib::data::{BoardConfig, BoardPiece, Color, Move, Square};
+use chrs_lib::generator::MoveGenerator;
+use chrs_lib::zobrist::hash;
 use std::env;
 use std::str::FromStr;
 

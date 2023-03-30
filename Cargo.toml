@@ -1,5 +1,6 @@
 [workspace]
-members = ["chrs-core", "chrs-perft", "chrs-ui", "run-wasm"]
+members = ["chrs-lib", "chrs-perft", "chrs"]
+default-members = ["chrs"]
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

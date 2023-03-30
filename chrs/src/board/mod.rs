@@ -2,8 +2,8 @@ mod embed;
 pub mod events;
 
 use crate::cache::Cache;
-use chrs_core::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
-use chrs_core::generator::MoveGenerator;
+use chrs_lib::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
+use chrs_lib::generator::MoveGenerator;
 use embed::{EmbeddedFonts, SvgSprites};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue::{

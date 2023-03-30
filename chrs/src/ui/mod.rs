@@ -3,7 +3,8 @@
  */
 mod gui;
 
-use chrs_core::ai::NegaMaxAI;
+use chrs_lib::ai::NegaMaxAI;
+use chrs_lib::data::BoardConfig;
 use egui::{ClippedPrimitive, Context, TexturesDelta};
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use gui::Gui;
@@ -12,8 +13,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
-
-use chrs_core::data::BoardConfig;
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct GuiFramework {

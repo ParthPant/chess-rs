@@ -25,9 +25,25 @@ Live Demo: [https://parthpant.github.io/chess-rs/](https://parthpant.github.io/c
 ## Getting Started
 
 ## Prerequisites
+
+### Rust
 You will require the rust toolchain to be installed on your system.
 
 Follow: [Rust Website](https://www.rust-lang.org/tools/install)
+
+Note: If you only want to run natively you are good to go. To build for
+WASM follow the you will also need to install the following.
+
+### Web Target
+```
+rustup target add wasm32-unknown-unknown
+```
+
+### Trunk
+```
+cargo install --locked trunk
+```
+
 
 ## Build from source
 
@@ -45,7 +61,7 @@ cargo build
 cargo run -p chrs-ui
 
 # Or you can run in the web browser with
-cargo run-wasm -p chrs-ui
+trunk serve
 
 # Or you can run perft analysis
 cargo run -p chrs-perft -- 5 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
