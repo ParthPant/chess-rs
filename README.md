@@ -1,6 +1,8 @@
 ## About The Project
 
-chess-rs is a Chess Engine written from scratch in Rust.
+chess-rs is a Chess Engine written from scratch in Rust that runs natively and on web!
+
+Live Demo: [https://parthpant.github.io/chess-rs/](https://parthpant.github.io/chess-rs/)
 
 ![screenshot](./images/screenshot.png)
 
