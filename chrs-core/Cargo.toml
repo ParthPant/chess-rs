@@ -12,3 +12,8 @@ rand = "0.8.5"
 strum = "0.24"
 strum_macros = "0.24"
 rand_chacha = "0.3.1"
+instant = "0.1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+instant = { version = "0.1", features = ["wasm-bindgen"] }

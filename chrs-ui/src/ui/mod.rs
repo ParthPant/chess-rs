@@ -3,6 +3,7 @@
  */
 mod gui;
 
+use chrs_core::ai::NegaMaxAI;
 use egui::{ClippedPrimitive, Context, TexturesDelta};
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use gui::Gui;
@@ -30,13 +31,12 @@ pub struct GuiFramework {
 
 impl GuiFramework {
     /// Create egui.
-    pub(crate) fn new<T>(
+    pub fn new<T>(
         event_loop: &EventLoopWindowTarget<T>,
         width: u32,
         height: u32,
         scale_factor: f32,
         pixels: &pixels::Pixels,
-        board_config: Rc<RefCell<BoardConfig>>,
     ) -> Self {
         let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
 
@@ -52,7 +52,7 @@ impl GuiFramework {
         let tex_format = pixels.render_texture_format();
         let renderer = Renderer::new(device, tex_format, None, 1);
         let textures = TexturesDelta::default();
-        let gui = Gui::new(board_config);
+        let gui = Gui::new();
 
         Self {
             egui_ctx,
@@ -66,29 +66,29 @@ impl GuiFramework {
     }
 
     /// Handle input events from the window manager.
-    pub(crate) fn handle_event(&mut self, event: &winit::event::WindowEvent) -> bool {
+    pub fn handle_event(&mut self, event: &winit::event::WindowEvent) -> bool {
         self.egui_state.on_event(&self.egui_ctx, event).consumed
     }
 
     /// Resize egui.
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
+    pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.screen_descriptor.size_in_pixels = [width, height];
         }
     }
 
     /// Update scaling factor.
-    pub(crate) fn scale_factor(&mut self, scale_factor: f64) {
+    pub fn scale_factor(&mut self, scale_factor: f64) {
         self.screen_descriptor.pixels_per_point = scale_factor as f32;
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window) {
+    pub fn prepare(&mut self, window: &Window, config: &mut BoardConfig, ai: &mut NegaMaxAI) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx);
+            self.gui.ui(egui_ctx, config, ai);
         });
 
         self.textures.append(output.textures_delta);
@@ -98,7 +98,7 @@ impl GuiFramework {
     }
 
     /// Render egui.
-    pub(crate) fn render(
+    pub fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         render_target: &wgpu::TextureView,

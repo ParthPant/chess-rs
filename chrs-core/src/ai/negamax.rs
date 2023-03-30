@@ -5,12 +5,12 @@ use crate::{
     data::{BoardConfig, Move},
     generator::MoveGenerator,
 };
-use std::time::Instant;
+use instant::Instant;
 
 pub struct NegaMaxAI {
-    depth: usize,
-    quiescence_depth: usize,
-    stats: AIStat,
+    pub depth: usize,
+    pub quiescence_depth: usize,
+    pub stats: AIStat,
     killer_moves: [[Option<Move>; Self::MAX_DEPTH]; 2],
     history_moves: [[i32; 64]; 12],
     table: TT,
@@ -42,6 +42,13 @@ impl NegaMaxAI {
     const MAX: i32 = 50000;
     const MATING_SCORE: i32 = -49000;
     const MAX_DEPTH: usize = 64;
+
+    pub fn new(depth: usize, qdepth: usize) -> Self {
+        let mut ai = Self::default();
+        ai.depth = depth;
+        ai.quiescence_depth = qdepth;
+        ai
+    }
 
     fn score_move(&mut self, m: &Move, ply: usize) -> i32 {
         if self.score_pv && self.pv_table[0][ply] == Some(*m) {

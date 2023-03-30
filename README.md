@@ -2,7 +2,7 @@
 
 chess-rs is a Chess Engine written from scratch in Rust.
 
-![screenshot](./screenshot.png)
+![screenshot](./images/screenshot.png)
 
 ### Features
 
@@ -41,6 +41,9 @@ cargo build
 ```
 # You can either start the Chess Engine with
 cargo run -p chrs-ui
+
+# Or you can run in the web browser with
+cargo run-wasm -p chrs-ui
 
 # Or you can run perft analysis
 cargo run -p chrs-perft -- 5 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

@@ -1,8 +1,10 @@
+mod embed;
 pub mod events;
 
 use crate::cache::Cache;
 use chrs_core::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
 use chrs_core::generator::MoveGenerator;
+use embed::{EmbeddedFonts, SvgSprites};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
 use fontdue::{
     layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings, TextStyle},
@@ -343,10 +345,7 @@ impl Board {
             Some(t) => t,
             None => {
                 log::info!("Importing glyph {}", glyph_path);
-                let str = std::fs::read_to_string(&glyph_path).unwrap_or_else(|e| {
-                    log::error!("std::fs::read_to_string {}: {}", &glyph_path, e);
-                    panic!();
-                });
+                let str = Board::get_svg_src(&glyph_path);
                 let t = usvg::Tree::from_str(&str, &usvg::Options::default()).unwrap_or_else(|e| {
                     log::error!("usvg::Tree::from_str: {}", e);
                     panic!();
@@ -358,7 +357,7 @@ impl Board {
     }
 
     fn get_glyph_path(p: &BoardPiece) -> String {
-        let s = format!("assets/pieces/{}.svg", p);
+        let s = format!("{}.svg", p);
         s.to_owned()
     }
 
@@ -398,8 +397,15 @@ impl Board {
     }
 
     fn get_font_src() -> Vec<u8> {
-        let filename = "assets/fonts/Roboto-Bold.ttf";
-        std::fs::read(filename).unwrap()
+        let filename = "Roboto-Bold.ttf";
+        let content = EmbeddedFonts::get(filename).expect(&format!("{} not found", filename));
+        content.data.as_ref().to_vec()
+    }
+
+    fn get_svg_src(filename: &str) -> String {
+        let content = SvgSprites::get(filename).expect(&format!("{} not found", filename));
+        let content = std::str::from_utf8(content.data.as_ref()).unwrap();
+        content.to_string()
     }
 
     fn draw_prom_choice(

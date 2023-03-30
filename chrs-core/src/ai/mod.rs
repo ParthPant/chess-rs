@@ -14,7 +14,7 @@ pub trait AI {
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct AIStat {
-    node_count: usize,
-    time: Duration,
-    max_depth: usize,
+    pub node_count: usize,
+    pub time: Duration,
+    pub max_depth: usize,
 }

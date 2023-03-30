@@ -7,11 +7,24 @@ edition = "2021"
 chrs-core = {path = "../chrs-core"}
 
 log = "0.4.17"
-pretty_env_logger = "0.4.0"
 winit = "0.27.5"
 pixels = "0.11.0"
 resvg = "0.29.0"
 egui = "0.20.0"
-egui-winit = "0.20.1"
 egui-wgpu = "0.20.0"
 fontdue = "0.7.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "0.2"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+egui-winit = {version = "0.20.1", default-features = false, features = ["links"]}
+web-sys = {version = "0.3", features = ["GpuTextureFormat"]}
+rust-embed = {version = "6.6.1", features = ["debug-embed"]}
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pollster = "0.2"
+pretty_env_logger = "0.4.0"
+egui-winit = "0.20.1"
+rust-embed = "6.6.1"
