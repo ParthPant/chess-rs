@@ -1,2 +1,3 @@
 [alias]
 run-wasm = "run --release --package run-wasm --"
+build-wasm = "run --release --package run-wasm -- --build-only"
