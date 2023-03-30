@@ -193,8 +193,8 @@ impl MoveCommit {
 
 #[derive(Debug, Clone)]
 pub struct MoveHistory {
-    list: [Option<MoveCommit>; 255],
-    counter: u8,
+    pub list: [Option<MoveCommit>; 255],
+    pub counter: u8,
     capacity: u8,
 }
 
@@ -214,16 +214,16 @@ impl MoveHistory {
             log::error!("MoveHistory is out of capacity");
             panic!();
         }
-        self.counter += 1;
         self.list[self.counter as usize] = Some(m);
+        self.counter += 1;
     }
 
     pub fn pop(&mut self) -> Option<MoveCommit> {
-        let r = self.list[self.counter as usize];
-        self.list[self.counter as usize] = None;
         if self.counter > 0 {
             self.counter -= 1;
         }
+        let r = self.list[self.counter as usize];
+        self.list[self.counter as usize] = None;
         r
     }
 

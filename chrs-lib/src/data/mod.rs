@@ -26,7 +26,7 @@ pub struct BoardConfig {
     halfmove_clock: u8,
     fullmove_number: u8,
     pub bitboards: BoardMap,
-    move_history: Box<MoveHistory>,
+    pub move_history: Box<MoveHistory>,
     mate: Option<Color>,
     hash: u64,
 }
