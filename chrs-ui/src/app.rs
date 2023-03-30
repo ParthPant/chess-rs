@@ -183,7 +183,7 @@ impl App {
                 }
                 Event::RedrawRequested(_) => {
                     // Redraw here
-                    board.draw(pixels.get_frame_mut(), &generator, &config, &moves);
+                    board.draw(pixels.frame_mut(), &generator, &config, &moves);
                     // Prepare egui
                     framework.prepare(&window, &mut config, &mut ai);
                     // Render everything together

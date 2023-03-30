@@ -58,7 +58,7 @@ impl Gui {
                         .add(egui::Label::new("📋").sense(egui::Sense::click()))
                         .clicked()
                     {
-                        ui.output().copied_text = config.get_fen();
+                        ui.output_mut(|o| o.copied_text = config.get_fen());
                     }
                     ui.add(egui::TextEdit::multiline(&mut self.fen));
                     if ui.button("Load Fen").clicked() {

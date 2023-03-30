@@ -8,23 +8,37 @@ chrs-core = {path = "../chrs-core"}
 
 log = "0.4.17"
 winit = "0.27.5"
-pixels = "0.11.0"
+pixels = "0.12.0"
 resvg = "0.29.0"
-egui = "0.20.0"
-egui-wgpu = "0.20.0"
 fontdue = "0.7.2"
+
+[dependencies.egui]
+git = "https://github.com/emilk/egui.git"
+rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+
+[dependencies.egui-wgpu]
+git = "https://github.com/emilk/egui.git"
+rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1"
 console_log = "0.2"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-egui-winit = {version = "0.20.1", default-features = false, features = ["links"]}
 web-sys = {version = "0.3", features = ["GpuTextureFormat"]}
 rust-embed = {version = "6.6.1", features = ["debug-embed"]}
+
+[dependencies.egui-winit]
+git = "https://github.com/emilk/egui.git"
+rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+default-features = false
+features = ["links"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 pollster = "0.2"
 pretty_env_logger = "0.4.0"
-egui-winit = "0.20.1"
 rust-embed = "6.6.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.egui-winit]
+git = "https://github.com/emilk/egui.git"
+rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
