@@ -166,17 +166,17 @@ impl Display for MoveCommit {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use MoveType::*;
         if self.m.move_type == EnPassant {
-            return write!(f, "{}{}e.p.", self.m.from, self.m.to);
+            return write!(f, "{}{}{}e.p.", self.m.p.utf_str(), self.m.from, self.m.to);
         } else if let Some(_) = self.m.capture {
-            return write!(f, "{}{}x{}", self.m.p, self.m.from, self.m.to);
+            return write!(f, "{}{}x{}", self.m.p.utf_str(), self.m.from, self.m.to);
         } else if self.m.move_type == Castle(CastleType::KingSide) {
             return write!(f, "0-0");
         } else if self.m.move_type == Castle(CastleType::QueenSide) {
             return write!(f, "0-0-0");
-        } else if let Promotion(Some(p)) = self.m.move_type {
-            return write!(f, "{}{}", self.m.to, p);
+        } else if let Promotion(Some(prom)) = self.m.move_type {
+            return write!(f, "{}{}", self.m.to, prom.utf_str());
         } else {
-            return write!(f, "{}{}{}", self.m.p, self.m.from, self.m.to);
+            return write!(f, "{}{}{}", self.m.p.utf_str(), self.m.from, self.m.to);
         }
     }
 }
