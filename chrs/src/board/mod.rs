@@ -245,15 +245,15 @@ impl Board {
             for x in 0..8 {
                 let paint = if x % 2 == 0 {
                     if y % 2 == 0 {
-                        &white_paint
-                    } else {
                         &black_paint
+                    } else {
+                        &white_paint
                     }
                 } else {
                     if y % 2 == 0 {
-                        &black_paint
-                    } else {
                         &white_paint
+                    } else {
+                        &black_paint
                     }
                 };
 
