@@ -33,7 +33,7 @@ impl Gui {
             ui.horizontal(|ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
                 ui.separator();
-                ui.toggle_value(&mut self.show_menu, "⚙ Menu");
+                ui.toggle_value(&mut self.show_menu, "☰ Menu");
                 ui.separator();
                 ui.toggle_value(&mut self.show_about, "ℹ About");
             });
@@ -49,13 +49,19 @@ impl Gui {
                     let start = end.saturating_sub(5);
                     let mut alpha = 0xff;
                     for i in (start..end).rev() {
+                        let color = ui.style().visuals.text_color();
                         ui.label(
                             egui::RichText::new(format!(
                                 "{}",
                                 config.move_history.list[i as usize].unwrap()
                             ))
                             .color(
-                                egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, alpha),
+                                egui::Color32::from_rgba_unmultiplied(
+                                    color.r(),
+                                    color.g(),
+                                    color.b(),
+                                    alpha,
+                                ),
                             ),
                         );
                         alpha = alpha.saturating_sub(50);
