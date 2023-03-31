@@ -18,7 +18,7 @@ jobs:
           # Optional version of trunk to install(eg. 'v0.16.0', 'latest')
           version: 'latest'
       - run: trunk clean
-      - run: trunk build --public-url chess-rs
+      - run: trunk build --release --public-url chess-rs
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:

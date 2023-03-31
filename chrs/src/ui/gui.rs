@@ -137,8 +137,8 @@ impl Gui {
                 ui.separator();
 
                 ui.heading("AI");
-                ui.add(Slider::new(&mut ai.depth, 2..=5).text("Search Depth"));
-                ui.add(Slider::new(&mut ai.quiescence_depth, 2..=5).text("Quiescence Depth"));
+                ui.add(Slider::new(&mut ai.depth, 2..=8).text("Search Depth"));
+                ui.add(Slider::new(&mut ai.quiescence_depth, 2..=8).text("Quiescence Depth"));
 
                 ui.separator();
 
