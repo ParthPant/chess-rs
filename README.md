@@ -58,7 +58,7 @@ cargo build
 
 ```
 # You can either start the Chess Engine with
-cargo run -p chrs-ui
+cargo run
 
 # Or you can run in the web browser with
 trunk serve
