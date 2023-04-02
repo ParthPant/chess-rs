@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::data::{BoardMap, CastleFlags};
+use crate::data::{BoardMap, CastleFlags, GameState};
 use crate::zobrist::hash;
 
 use super::piece::{BoardPiece, Color};
@@ -199,7 +199,7 @@ impl Fen {
             fullmove_number,
             bitboards,
             move_history: Default::default(),
-            mate: None,
+            state: GameState::InPlay,
             hash: 0,
         };
         c.hash = hash(&c);

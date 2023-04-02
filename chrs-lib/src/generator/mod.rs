@@ -49,15 +49,21 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
-    pub fn check_for_mate(&self, config: &mut BoardConfig, side: Color) {
-        let sq = match side {
+    pub fn update_state(&self, config: &mut BoardConfig) {
+        let sq = match config.get_active_color() {
             Color::White => config.bitboards[BoardPiece::WhiteKing as usize].peek(),
             Color::Black => config.bitboards[BoardPiece::BlackKing as usize].peek(),
         };
-        let is_attacked = self.is_sq_attacked(sq.unwrap(), !side, config);
-        let can_move = self.gen_all_moves(side, config, false).len() > 0;
+        let is_attacked = self.is_sq_attacked(sq.unwrap(), !config.get_active_color(), config);
+        let can_move = self
+            .gen_all_moves(config.get_active_color(), config, false)
+            .len()
+            > 0;
+
         if is_attacked && !can_move {
-            config.set_mate(side);
+            config.set_mate(config.get_active_color());
+        } else if !can_move {
+            config.set_stalemate();
         }
     }
 

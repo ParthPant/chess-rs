@@ -2,7 +2,7 @@ mod embed;
 pub mod events;
 
 use crate::cache::Cache;
-use chrs_lib::data::{BoardConfig, BoardPiece, Color, Move, MoveList, Square};
+use chrs_lib::data::{BoardConfig, BoardPiece, Color, GameState, Move, MoveList, Square};
 use chrs_lib::generator::MoveGenerator;
 use embed::{EmbeddedFonts, SvgSprites};
 use events::{BoardEvent, ElementState, MouseButton, MouseState};
@@ -98,7 +98,7 @@ impl Board {
     pub fn handle_event(&mut self, e: BoardEvent, config: &BoardConfig) {
         self.update_mouse_state(e);
 
-        if let Some(_) = config.get_mate() {
+        if config.get_state() != GameState::InPlay {
             return;
         }
 
@@ -317,7 +317,7 @@ impl Board {
             resvg::render(&tree, fit, transform, pixmap.as_mut());
         }
 
-        if let Some(mate) = config.get_mate() {
+        if let GameState::Mate(mate) = config.get_state() {
             let transform =
                 tiny_skia::Transform::from_translate(self.overlay_xywh.0, self.overlay_xywh.1);
             self.draw_text(
@@ -326,6 +326,10 @@ impl Board {
                 transform,
                 &mut pixmap,
             )
+        } else if config.get_state() == GameState::StaleMate {
+            let transform =
+                tiny_skia::Transform::from_translate(self.overlay_xywh.0, self.overlay_xywh.1);
+            self.draw_text(&format!("It's a Stalemate"), 32.0, transform, &mut pixmap)
         }
 
         frame.copy_from_slice(pixmap.data());

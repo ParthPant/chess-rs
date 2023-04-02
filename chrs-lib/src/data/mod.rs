@@ -18,6 +18,13 @@ pub use square::Square;
 
 pub type BoardMap = [BitBoard; 12];
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GameState {
+    InPlay,
+    Mate(Color),
+    StaleMate,
+}
+
 #[derive(Debug, Clone)]
 pub struct BoardConfig {
     active_color: Color,
@@ -27,7 +34,7 @@ pub struct BoardConfig {
     fullmove_number: u8,
     pub bitboards: BoardMap,
     pub move_history: Box<List<MoveCommit>>,
-    mate: Option<Color>,
+    pub state: GameState,
     hash: u64,
 }
 
@@ -47,11 +54,15 @@ impl BoardConfig {
     }
 
     pub fn set_mate(&mut self, c: Color) {
-        self.mate = Some(c);
+        self.state = GameState::Mate(c);
     }
 
-    pub fn get_mate(&self) -> Option<Color> {
-        self.mate
+    pub fn set_stalemate(&mut self) {
+        self.state = GameState::StaleMate;
+    }
+
+    pub fn get_state(&self) -> GameState {
+        self.state
     }
 
     fn set_ep_target(&mut self, t: Square) {
@@ -258,6 +269,7 @@ impl BoardConfig {
         if let Some(commit) = self.move_history.pop() {
             self.undo_commit(&commit);
         }
+        self.state = GameState::InPlay;
     }
 
     pub fn undo_commit(&mut self, commit: &MoveCommit) {

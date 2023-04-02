@@ -1,7 +1,7 @@
 use crate::board::{events::BoardEvent, Board};
 use crate::ui::GuiFramework;
 use chrs_lib::ai::{NegaMaxAI, AI};
-use chrs_lib::data::{BoardConfig, Color, MoveList, Square};
+use chrs_lib::data::{BoardConfig, Color, GameState, MoveList, Square};
 use chrs_lib::generator::MoveGenerator;
 
 use log;
@@ -150,35 +150,36 @@ impl App {
                     }
                 }
                 Event::MainEventsCleared => {
-                    let turn = config.get_active_color();
-                    if turn == Color::Black {
-                        let ai_move = ai.get_best_move(&config, &generator);
-                        if let Some(ai_move) = ai_move {
-                            log::info!("AI response {:?}", ai.get_stats());
-                            config.apply_move(ai_move);
+                    if config.get_state() == GameState::InPlay {
+                        let turn = config.get_active_color();
+                        if turn == Color::Black {
+                            let ai_move = ai.get_best_move(&config, &generator);
+                            if let Some(ai_move) = ai_move {
+                                log::info!("AI response {:?}", ai.get_stats());
+                                config.apply_move(ai_move);
+                            } else {
+                                log::info!("AI did not generate any move");
+                            }
                         } else {
-                            log::info!("AI did not generate any move");
-                        }
-                    } else {
-                        if let Some(user_move) = board.get_user_move() {
-                            if moves.has_target_sq(user_move.to) {
-                                if !user_move.is_empty_prom() {
-                                    config.apply_move(user_move);
-                                    board.clear_user_move();
+                            if let Some(user_move) = board.get_user_move() {
+                                if moves.has_target_sq(user_move.to) {
+                                    if !user_move.is_empty_prom() {
+                                        config.apply_move(user_move);
+                                        board.clear_user_move();
+                                    }
+                                }
+                            }
+                            let sq = board.get_picked_piece();
+                            if sq != picked_sq {
+                                picked_sq = sq;
+                                if let Some(sq) = sq {
+                                    let p = config.get_at_sq(sq).unwrap();
+                                    moves = generator.gen_piece_moves(p, sq, &mut config, false);
                                 }
                             }
                         }
-                        let sq = board.get_picked_piece();
-                        if sq != picked_sq {
-                            picked_sq = sq;
-                            if let Some(sq) = sq {
-                                let p = config.get_at_sq(sq).unwrap();
-                                moves = generator.gen_piece_moves(p, sq, &mut config, false);
-                            }
-                        }
+                        generator.update_state(&mut config);
                     }
-                    generator.check_for_mate(&mut config, turn);
-                    generator.check_for_mate(&mut config, !turn);
                     window.request_redraw();
                 }
                 Event::RedrawRequested(_) => {
