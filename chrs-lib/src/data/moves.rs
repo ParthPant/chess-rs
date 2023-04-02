@@ -195,15 +195,15 @@ impl MoveCommit {
 }
 
 #[derive(Debug, Clone)]
-pub struct MoveHistory {
-    pub list: [Option<MoveCommit>; 255],
+pub struct List<T> {
+    pub list: [Option<T>; 255],
     pub counter: u8,
     capacity: u8,
 }
 
-impl Default for MoveHistory {
+impl<T: Copy> Default for List<T> {
     fn default() -> Self {
-        MoveHistory {
+        List {
             list: [None; 255],
             counter: 0,
             capacity: 255,
@@ -211,8 +211,12 @@ impl Default for MoveHistory {
     }
 }
 
-impl MoveHistory {
-    pub fn push(&mut self, m: MoveCommit) {
+impl<T: Copy> List<T> {
+    pub fn clear(&mut self) {
+        self.counter = 0;
+    }
+
+    pub fn push(&mut self, m: T) {
         if self.counter == self.capacity {
             log::error!("MoveHistory is out of capacity");
             panic!();
@@ -221,7 +225,7 @@ impl MoveHistory {
         self.counter += 1;
     }
 
-    pub fn pop(&mut self) -> Option<MoveCommit> {
+    pub fn pop(&mut self) -> Option<T> {
         if self.counter > 0 {
             self.counter -= 1;
         }
@@ -230,8 +234,29 @@ impl MoveHistory {
         r
     }
 
-    pub fn get_last(&self) -> Option<MoveCommit> {
+    pub fn get_last(&self) -> Option<T> {
         self.list[self.counter as usize]
+    }
+
+    pub fn data(&mut self) -> &mut [Option<T>] {
+        &mut self.list[..(self.counter as usize)]
+    }
+
+    pub fn len(&self) -> usize {
+        self.counter as usize
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Option<T>> {
+        self.list.iter().take(self.counter as usize)
+    }
+}
+
+impl List<Move> {
+    pub fn has_target_sq(&self, sq: Square) -> bool {
+        self.list
+            .iter()
+            .take(self.counter as usize)
+            .any(|x| x.unwrap().to == sq)
     }
 }
 

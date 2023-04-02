@@ -12,7 +12,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 pub use bitboard::BitBoard;
-pub use moves::{Move, MoveCommit, MoveHistory, MoveList, MoveType};
+pub use moves::{List, Move, MoveCommit, MoveList, MoveType};
 pub use piece::{BoardPiece, Color, B_PIECES, W_PIECES};
 pub use square::Square;
 
@@ -26,7 +26,7 @@ pub struct BoardConfig {
     halfmove_clock: u8,
     fullmove_number: u8,
     pub bitboards: BoardMap,
-    pub move_history: Box<MoveHistory>,
+    pub move_history: Box<List<MoveCommit>>,
     mate: Option<Color>,
     hash: u64,
 }
