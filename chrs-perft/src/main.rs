@@ -5,6 +5,7 @@ use chrs_lib::generator::MoveGenerator;
 use chrs_lib::zobrist::hash;
 use std::env;
 use std::str::FromStr;
+use std::time::Instant;
 
 fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divide: bool) -> usize {
     if depth == 0 {
@@ -24,7 +25,7 @@ fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divid
         if let Some(commit) = config.make_move(*m) {
             let c = perft_impl(depth - 1, config, gen, false);
             if divide {
-                println!("{} {}", commit.m, c);
+                println!("{} {}", commit.m.to_string().to_lowercase(), c);
             }
             count += c;
             config.undo_commit(&commit);
@@ -37,15 +38,19 @@ fn perft_impl(depth: usize, config: &mut BoardConfig, gen: &MoveGenerator, divid
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let depth: usize = args[1].parse().unwrap();
+    let depth = std::env::args()
+        .nth(1)
+        .expect("Depth not provided")
+        .parse()
+        .unwrap();
+    let fen = std::env::args().nth(2).expect("Fen not provided");
+    let moves = std::env::args().nth(3).unwrap_or_default();
 
-    let fen = &args[2];
-    let mut config = BoardConfig::from_fen_str(fen);
+    let mut config = BoardConfig::from_fen_str(&fen);
     let gen = MoveGenerator::default();
 
-    if args.len() > 3 {
-        for i in args[3].split(' ').collect::<Vec<&str>>() {
+    if moves != "" {
+        for i in moves.split(' ').collect::<Vec<&str>>() {
             let chars = i.chars();
             let from: Square =
                 Square::from_str(&chars.clone().take(2).collect::<String>()).unwrap();
@@ -65,6 +70,9 @@ fn main() {
         }
     }
 
+    let now = Instant::now();
     let c = perft_impl(depth, &mut config, &gen, true);
+    let elapsed = now.elapsed();
     println!("\n{}", c);
+    println!("\nTime Take: {:?}", elapsed);
 }

@@ -113,7 +113,7 @@ impl NegaMaxAI {
 
         let in_check = config.is_king_in_check(gen, config.get_active_color());
         let mut value = Self::MIN;
-        let mut moves = gen.gen_all_moves(config.get_active_color(), &config, false);
+        let mut moves = gen.gen_all_moves(config.get_active_color(), config, false);
         if self.follow_pv {
             if moves
                 .data()
@@ -209,7 +209,7 @@ impl NegaMaxAI {
         }
         alpha = i32::max(alpha, eval);
 
-        let mut moves = gen.gen_all_moves(config.get_active_color(), &config, true);
+        let mut moves = gen.gen_all_moves(config.get_active_color(), config, true);
         moves
             .data()
             .sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));

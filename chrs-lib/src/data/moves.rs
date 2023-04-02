@@ -41,7 +41,10 @@ impl Default for Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{}{}", self.from, self.to)
+        match self.move_type {
+            MoveType::Promotion(Some(prom)) => write!(f, "{}{}{}", self.from, self.to, prom),
+            _ => write!(f, "{}{}", self.from, self.to),
+        }
     }
 }
 

@@ -173,12 +173,12 @@ impl App {
                             picked_sq = sq;
                             if let Some(sq) = sq {
                                 let p = config.get_at_sq(sq).unwrap();
-                                moves = generator.gen_piece_moves(p, sq, &config, false);
+                                moves = generator.gen_piece_moves(p, sq, &mut config, false);
                             }
                         }
                     }
-                    config.check_for_mate(&generator, turn);
-                    config.check_for_mate(&generator, !turn);
+                    generator.check_for_mate(&mut config, turn);
+                    generator.check_for_mate(&mut config, !turn);
                     window.request_redraw();
                 }
                 Event::RedrawRequested(_) => {

@@ -8,7 +8,7 @@ Live Demo: [https://parthpant.github.io/chess-rs/](https://parthpant.github.io/c
 
 ### Features
 
-- [x] Move Generation using BitBoards (~17s perft results at depth 6 for starting position)
+- [x] Move Generation using BitBoards (~12s perft results at depth 6 for starting position)
 - [x] Supports all moves including en-passant, pawn promotion and castling
 - [x] GUI gameplay
 - [x] Perft Runner
@@ -32,7 +32,7 @@ You will require the rust toolchain to be installed on your system.
 Follow: [Rust Website](https://www.rust-lang.org/tools/install)
 
 Note: If you only want to run natively you are good to go. To build for
-WASM follow the you will also need to install the following.
+WASM you will also need to install the following.
 
 ### Web Target
 ```

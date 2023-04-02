@@ -49,10 +49,22 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
+    pub fn check_for_mate(&self, config: &mut BoardConfig, side: Color) {
+        let sq = match side {
+            Color::White => config.bitboards[BoardPiece::WhiteKing as usize].peek(),
+            Color::Black => config.bitboards[BoardPiece::BlackKing as usize].peek(),
+        };
+        let is_attacked = self.is_sq_attacked(sq.unwrap(), !side, config);
+        let can_move = self.gen_all_moves(side, config, false).len() > 0;
+        if is_attacked && !can_move {
+            config.set_mate(side);
+        }
+    }
+
     pub fn gen_all_moves(
         &self,
         side: Color,
-        config: &BoardConfig,
+        config: &mut BoardConfig,
         only_captures: bool,
     ) -> MoveList {
         let pieces = match side {
@@ -77,11 +89,11 @@ impl MoveGenerator {
         &self,
         piece: BoardPiece,
         pos: Square,
-        config: &BoardConfig,
+        config: &mut BoardConfig,
         only_captures: bool,
     ) -> MoveList {
         use BoardPiece::*;
-        let mut config = config.clone();
+        // let mut config = config.clone();
         let (friendly, enemy) = match piece.get_color() {
             Color::White => (config.white_occupancy(), config.black_occupancy()),
             Color::Black => (config.black_occupancy(), config.white_occupancy()),
@@ -109,14 +121,14 @@ impl MoveGenerator {
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if pos == Square::E1 && config.get_can_white_castle_kingside() {
                     if !(all.is_set(Square::F1) || all.is_set(Square::G1))
-                        && !self.is_sq_attacked(Square::F1, Color::Black, &mut config)
+                        && !self.is_sq_attacked(Square::F1, Color::Black, config)
                     {
                         moves.set(Square::G1);
                     }
                 }
                 if pos == Square::E1 && config.get_can_white_castle_queenside() {
                     if !(all.is_set(Square::B1) || all.is_set(Square::C1) || all.is_set(Square::D1))
-                        && !self.is_sq_attacked(Square::D1, Color::Black, &mut config)
+                        && !self.is_sq_attacked(Square::D1, Color::Black, config)
                     {
                         moves.set(Square::C1);
                     }
@@ -128,14 +140,14 @@ impl MoveGenerator {
                 let mut moves = self.get_king_atk(pos) & !friendly;
                 if pos == Square::E8 && config.get_can_black_castle_kingside() {
                     if !(all.is_set(Square::F8) || all.is_set(Square::G8))
-                        && !self.is_sq_attacked(Square::F8, Color::White, &mut config)
+                        && !self.is_sq_attacked(Square::F8, Color::White, config)
                     {
                         moves.set(Square::G8);
                     }
                 }
                 if pos == Square::E8 && config.get_can_black_castle_queenside() {
                     if !(all.is_set(Square::B8) || all.is_set(Square::C8) || all.is_set(Square::D8))
-                        && !self.is_sq_attacked(Square::D8, Color::White, &mut config)
+                        && !self.is_sq_attacked(Square::D8, Color::White, config)
                     {
                         moves.set(Square::C8);
                     }
@@ -191,9 +203,9 @@ impl MoveGenerator {
         };
 
         if only_captures {
-            self.make_movelist((moves & enemy) | ep_moves, pos, &mut config)
+            self.make_movelist((moves & enemy) | ep_moves, pos, config)
         } else {
-            self.make_movelist(moves | ep_moves, pos, &mut config)
+            self.make_movelist(moves | ep_moves, pos, config)
         }
     }
 
@@ -311,18 +323,23 @@ impl MoveGenerator {
         false
     }
 
-    fn make_movelist(&self, mut moves: BitBoard, from: Square, c: &mut BoardConfig) -> MoveList {
+    fn make_movelist(
+        &self,
+        mut moves: BitBoard,
+        from: Square,
+        config: &mut BoardConfig,
+    ) -> MoveList {
         let mut list = MoveList::new();
         while moves.data() > 0 {
             let to = moves.pop_sq().unwrap();
-            let m = Move::infer(from, to, c);
+            let m = Move::infer(from, to, config);
             let p = m.p;
             if m.is_prom() {
                 use BoardPiece::*;
                 match p.get_color() {
                     Color::White => {
                         let m = Move::new_prom(from, to, p, m.capture, WhiteRook);
-                        if self.is_legal(m, c, p.get_color()) {
+                        if self.is_legal(m, config, p.get_color()) {
                             list.add(m);
                             list.add(Move::new_prom(from, to, p, m.capture, WhiteBishop));
                             list.add(Move::new_prom(from, to, p, m.capture, WhiteKnight));
@@ -331,7 +348,7 @@ impl MoveGenerator {
                     }
                     Color::Black => {
                         let m = Move::new_prom(from, to, p, m.capture, BlackRook);
-                        if self.is_legal(m, c, p.get_color()) {
+                        if self.is_legal(m, config, p.get_color()) {
                             list.add(Move::new_prom(from, to, p, m.capture, BlackBishop));
                             list.add(Move::new_prom(from, to, p, m.capture, BlackKnight));
                             list.add(Move::new_prom(from, to, p, m.capture, BlackQueen));
@@ -340,11 +357,11 @@ impl MoveGenerator {
                 }
             } else {
                 if let MoveType::Castle(_) = m.move_type {
-                    if self.is_sq_attacked(from, !p.get_color(), c) {
+                    if self.is_sq_attacked(from, !p.get_color(), config) {
                         continue;
                     }
                 }
-                if self.is_legal(m, c, p.get_color()) {
+                if self.is_legal(m, config, p.get_color()) {
                     list.add(m);
                 }
             }

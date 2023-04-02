@@ -46,7 +46,7 @@ impl BoardConfig {
         println!("{}", self.to_string());
     }
 
-    fn set_mate(&mut self, c: Color) {
+    pub fn set_mate(&mut self, c: Color) {
         self.mate = Some(c);
     }
 
@@ -109,18 +109,6 @@ impl BoardConfig {
             return gen.is_sq_attacked(sq, !side, &self);
         }
         false
-    }
-
-    pub fn check_for_mate(&mut self, gen: &MoveGenerator, side: Color) {
-        let sq = match side {
-            Color::White => self.bitboards[BoardPiece::WhiteKing as usize].peek(),
-            Color::Black => self.bitboards[BoardPiece::BlackKing as usize].peek(),
-        };
-        let is_attacked = gen.is_sq_attacked(sq.unwrap(), !side, &self);
-        let can_move = gen.gen_all_moves(side, &self, false).len() > 0;
-        if is_attacked && !can_move {
-            self.set_mate(side);
-        }
     }
 
     pub fn make_move(&mut self, m: Move) -> Option<MoveCommit> {
