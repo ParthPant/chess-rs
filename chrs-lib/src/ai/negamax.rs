@@ -115,20 +115,14 @@ impl NegaMaxAI {
         let mut value = Self::MIN;
         let mut moves = gen.gen_all_moves(config.get_active_color(), config, false);
         if self.follow_pv {
-            if moves
-                .data()
-                .iter()
-                .any(|m| self.pv_table[0][ply] == Some(*m))
-            {
+            if moves.iter().any(|m| self.pv_table[0][ply] == Some(*m)) {
                 self.score_pv = true;
                 self.follow_pv = true;
             } else {
                 self.follow_pv = false;
             }
         }
-        moves
-            .data()
-            .sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));
+        moves.sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));
 
         for m in moves.iter() {
             if let Some(commit) = config.make_move(*m) {
@@ -210,9 +204,7 @@ impl NegaMaxAI {
         alpha = i32::max(alpha, eval);
 
         let mut moves = gen.gen_all_moves(config.get_active_color(), config, true);
-        moves
-            .data()
-            .sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));
+        moves.sort_by(|a, b| self.score_move(b, ply).cmp(&self.score_move(a, ply)));
 
         for m in moves.iter() {
             assert!(m.capture.is_some());

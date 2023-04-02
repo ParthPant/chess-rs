@@ -83,8 +83,7 @@ impl MoveGenerator {
             let mut bb = config.bitboards[*p as usize];
             while bb.data() > 0 {
                 let pos = bb.pop_sq().unwrap();
-                let piece_moves = self.gen_piece_moves(*p, pos, config, only_captures);
-                moves.append(piece_moves);
+                self.gen_piece_moves_impl(*p, pos, config, only_captures, &mut moves);
             }
         }
 
@@ -98,6 +97,19 @@ impl MoveGenerator {
         config: &mut BoardConfig,
         only_captures: bool,
     ) -> MoveList {
+        let mut list = MoveList::new();
+        self.gen_piece_moves_impl(piece, pos, config, only_captures, &mut list);
+        list
+    }
+
+    fn gen_piece_moves_impl(
+        &self,
+        piece: BoardPiece,
+        pos: Square,
+        config: &mut BoardConfig,
+        only_captures: bool,
+        list: &mut MoveList,
+    ) {
         use BoardPiece::*;
         // let mut config = config.clone();
         let (friendly, enemy) = match piece.get_color() {
@@ -209,9 +221,9 @@ impl MoveGenerator {
         };
 
         if only_captures {
-            self.make_movelist((moves & enemy) | ep_moves, pos, config)
+            self.make_movelist((moves & enemy) | ep_moves, pos, config, list)
         } else {
-            self.make_movelist(moves | ep_moves, pos, config)
+            self.make_movelist(moves | ep_moves, pos, config, list)
         }
     }
 
@@ -334,8 +346,8 @@ impl MoveGenerator {
         mut moves: BitBoard,
         from: Square,
         config: &mut BoardConfig,
-    ) -> MoveList {
-        let mut list = MoveList::new();
+        list: &mut MoveList,
+    ) {
         while moves.data() > 0 {
             let to = moves.pop_sq().unwrap();
             let m = Move::infer(from, to, config);
@@ -346,18 +358,18 @@ impl MoveGenerator {
                     Color::White => {
                         let m = Move::new_prom(from, to, p, m.capture, WhiteRook);
                         if self.is_legal(m, config, p.get_color()) {
-                            list.add(m);
-                            list.add(Move::new_prom(from, to, p, m.capture, WhiteBishop));
-                            list.add(Move::new_prom(from, to, p, m.capture, WhiteKnight));
-                            list.add(Move::new_prom(from, to, p, m.capture, WhiteQueen));
+                            list.push(m);
+                            list.push(Move::new_prom(from, to, p, m.capture, WhiteBishop));
+                            list.push(Move::new_prom(from, to, p, m.capture, WhiteKnight));
+                            list.push(Move::new_prom(from, to, p, m.capture, WhiteQueen));
                         }
                     }
                     Color::Black => {
                         let m = Move::new_prom(from, to, p, m.capture, BlackRook);
                         if self.is_legal(m, config, p.get_color()) {
-                            list.add(Move::new_prom(from, to, p, m.capture, BlackBishop));
-                            list.add(Move::new_prom(from, to, p, m.capture, BlackKnight));
-                            list.add(Move::new_prom(from, to, p, m.capture, BlackQueen));
+                            list.push(Move::new_prom(from, to, p, m.capture, BlackBishop));
+                            list.push(Move::new_prom(from, to, p, m.capture, BlackKnight));
+                            list.push(Move::new_prom(from, to, p, m.capture, BlackQueen));
                         }
                     }
                 }
@@ -368,10 +380,9 @@ impl MoveGenerator {
                     }
                 }
                 if self.is_legal(m, config, p.get_color()) {
-                    list.add(m);
+                    list.push(m);
                 }
             }
         }
-        list
     }
 }

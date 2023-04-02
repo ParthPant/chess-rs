@@ -2,6 +2,7 @@ use super::piece::BoardPiece;
 use super::square::Square;
 use super::{BoardConfig, CastleFlags};
 use std::fmt::{Debug, Display, Formatter, Result};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum CastleType {
@@ -262,32 +263,26 @@ impl List<Move> {
 
 pub struct MoveList(pub Vec<Move>);
 
-impl MoveList {
-    pub fn new() -> Self {
-        Self(Vec::with_capacity(10))
-    }
+impl Deref for MoveList {
+    type Target = Vec<Move>;
 
-    pub fn data(&mut self) -> &mut Vec<Move> {
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for MoveList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
+}
 
-    pub fn append(&mut self, mut list: MoveList) {
-        self.0.append(&mut list.0);
-    }
-
-    pub fn add(&mut self, m: Move) {
-        self.0.push(m);
-    }
-
+impl MoveList {
     pub fn has_target_sq(&self, sq: Square) -> bool {
         self.0.iter().any(|x| x.to == sq)
     }
 
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<Move> {
-        self.0.iter()
+    pub fn new() -> Self {
+        Self(Vec::with_capacity(10))
     }
 }
