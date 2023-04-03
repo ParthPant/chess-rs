@@ -115,7 +115,7 @@ pub fn evaluate(config: &BoardConfig) -> i32 {
     use BoardPiece::*;
     for p in BoardPiece::iter() {
         let mut bb = config.bitboards[p as usize];
-        while bb.data() > 0 {
+        while *bb > 0 {
             let pos = bb.pop_sq().unwrap();
             let mat_score = MATERIAL_SCORE[p as usize];
             let pos_score = match p {

@@ -139,8 +139,7 @@ pub struct MagicEntry {
 pub struct TableFillError;
 
 pub fn magic_index(entry: &MagicEntry, blockers: BitBoard) -> usize {
-    let blockers: u64 = blockers.into();
-    let relevant_blockers = blockers & entry.relevant_occupancy;
+    let relevant_blockers = *blockers & entry.relevant_occupancy;
     let hash = relevant_blockers.wrapping_mul(entry.magic);
     let index = (hash >> (64 - entry.index_bits)) as usize;
     index

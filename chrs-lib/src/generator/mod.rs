@@ -81,7 +81,7 @@ impl MoveGenerator {
         let mut moves = MoveList::new();
         for p in pieces {
             let mut bb = config.bitboards[*p as usize];
-            while bb.data() > 0 {
+            while *bb > 0 {
                 let pos = bb.pop_sq().unwrap();
                 self.gen_piece_moves_impl(*p, pos, config, only_captures, &mut moves);
             }
@@ -177,7 +177,7 @@ impl MoveGenerator {
                     if pos < Square::A8 {
                         // not in rank 8
                         let single = BitBoard::from(1 << (pos as usize + 8)) & !friendly & !enemy;
-                        if pos >= Square::A2 && pos <= Square::H2 && single > BitBoard::from(0) {
+                        if pos >= Square::A2 && pos <= Square::H2 && single.non_zero() {
                             (single | BitBoard::from(1 << (pos as usize + 16))) & !friendly & !enemy
                         } else {
                             single
@@ -189,8 +189,8 @@ impl MoveGenerator {
                 let atks = self.get_white_pawn_atk(pos);
                 let moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
-                    if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
-                        ep_moves |= BitBoard::from(1 << t as usize);
+                    if *atks & (1 << t as usize) > 0 {
+                        *ep_moves |= 1 << t as usize;
                     }
                 }
                 moves
@@ -200,7 +200,7 @@ impl MoveGenerator {
                     if pos > Square::H1 {
                         // not in rank 1
                         let single = BitBoard::from(1 << (pos as usize - 8)) & !friendly & !enemy;
-                        if pos >= Square::A7 && pos <= Square::H7 && single > BitBoard::from(0) {
+                        if pos >= Square::A7 && pos <= Square::H7 && single.non_zero() {
                             (single | BitBoard::from(1 << (pos as usize - 16))) & !friendly & !enemy
                         } else {
                             single
@@ -212,8 +212,8 @@ impl MoveGenerator {
                 let atks = self.get_black_pawn_atk(pos);
                 let moves = quiet | (atks & enemy);
                 if let Some(t) = config.get_en_passant_target() {
-                    if atks & BitBoard::from(1 << t as usize) > BitBoard::from(0) {
-                        ep_moves |= BitBoard::from(1 << t as usize);
+                    if *atks & (1 << t as usize) > 0 {
+                        *ep_moves |= 1 << t as usize;
                     }
                 }
                 moves
@@ -230,29 +230,30 @@ impl MoveGenerator {
     pub fn is_sq_attacked(&self, sq: Square, color: Color, config: &BoardConfig) -> bool {
         match color {
             Color::White => {
-                if self.get_black_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::WhitePawn)
-                    > BitBoard::from(0)
+                if (self.get_black_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::WhitePawn))
+                    .non_zero()
                 {
                     return true;
-                } else if self.get_knight_atk(sq)
-                    & config.get_piece_occupancy(BoardPiece::WhiteKnight)
-                    > BitBoard::from(0)
+                } else if (self.get_knight_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::WhiteKnight))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_king_atk(sq) & config.get_piece_occupancy(BoardPiece::WhiteKing)
-                    > BitBoard::from(0)
+                } else if (self.get_king_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::WhiteKing))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_bishop_atk(sq, config.all_occupancy())
+                } else if (self.get_bishop_atk(sq, config.all_occupancy())
                     & (config.get_piece_occupancy(BoardPiece::WhiteBishop)
-                        | config.get_piece_occupancy(BoardPiece::WhiteQueen))
-                    > BitBoard::from(0)
+                        | config.get_piece_occupancy(BoardPiece::WhiteQueen)))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_rook_atk(sq, config.all_occupancy())
+                } else if (self.get_rook_atk(sq, config.all_occupancy())
                     & (config.get_piece_occupancy(BoardPiece::WhiteRook)
-                        | config.get_piece_occupancy(BoardPiece::WhiteQueen))
-                    > BitBoard::from(0)
+                        | config.get_piece_occupancy(BoardPiece::WhiteQueen)))
+                .non_zero()
                 {
                     return true;
                 } else {
@@ -260,29 +261,30 @@ impl MoveGenerator {
                 }
             }
             Color::Black => {
-                if self.get_white_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::BlackPawn)
-                    > BitBoard::from(0)
+                if (self.get_white_pawn_atk(sq) & config.get_piece_occupancy(BoardPiece::BlackPawn))
+                    .non_zero()
                 {
                     return true;
-                } else if self.get_knight_atk(sq)
-                    & config.get_piece_occupancy(BoardPiece::BlackKnight)
-                    > BitBoard::from(0)
+                } else if (self.get_knight_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::BlackKnight))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_king_atk(sq) & config.get_piece_occupancy(BoardPiece::BlackKing)
-                    > BitBoard::from(0)
+                } else if (self.get_king_atk(sq)
+                    & config.get_piece_occupancy(BoardPiece::BlackKing))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_bishop_atk(sq, config.all_occupancy())
+                } else if (self.get_bishop_atk(sq, config.all_occupancy())
                     & (config.get_piece_occupancy(BoardPiece::BlackBishop)
-                        | config.get_piece_occupancy(BoardPiece::BlackQueen))
-                    > BitBoard::from(0)
+                        | config.get_piece_occupancy(BoardPiece::BlackQueen)))
+                .non_zero()
                 {
                     return true;
-                } else if self.get_rook_atk(sq, config.all_occupancy())
+                } else if (self.get_rook_atk(sq, config.all_occupancy())
                     & (config.get_piece_occupancy(BoardPiece::BlackRook)
-                        | config.get_piece_occupancy(BoardPiece::BlackQueen))
-                    > BitBoard::from(0)
+                        | config.get_piece_occupancy(BoardPiece::BlackQueen)))
+                .non_zero()
                 {
                     return true;
                 } else {
@@ -348,7 +350,7 @@ impl MoveGenerator {
         config: &mut BoardConfig,
         list: &mut MoveList,
     ) {
-        while moves.data() > 0 {
+        while *moves > 0 {
             let to = moves.pop_sq().unwrap();
             let m = Move::infer(from, to, config);
             let p = m.p;

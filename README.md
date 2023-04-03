@@ -8,7 +8,7 @@ Live Demo: [https://parthpant.github.io/chess-rs/](https://parthpant.github.io/c
 
 ### Features
 
-- [x] Move Generation using BitBoards (~10s perft results at depth 6 for starting position)
+- [x] Move Generation using BitBoards (<10s perft results at depth 6 for starting position)
 - [x] Supports all moves including en-passant, pawn promotion and castling
 - [x] GUI gameplay
 - [x] Perft Runner

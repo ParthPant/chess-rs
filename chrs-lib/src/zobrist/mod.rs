@@ -54,24 +54,20 @@ pub fn hash(config: &BoardConfig) -> u64 {
     key
 }
 
-pub fn update_piece(sq: Square, p: BoardPiece, mut key: u64) -> u64 {
-    key ^= PIECE_KEYS[sq as usize][p as usize];
-    key
+pub fn update_piece(sq: Square, p: BoardPiece, key: &mut u64) {
+    *key ^= PIECE_KEYS[sq as usize][p as usize];
 }
 
-pub fn update_ep(sq: Square, mut key: u64) -> u64 {
-    key ^= EP_KEYS[sq as usize];
-    key
+pub fn update_ep(sq: Square, key: &mut u64) {
+    *key ^= EP_KEYS[sq as usize];
 }
 
-pub fn update_castle(c: u8, mut key: u64) -> u64 {
-    key ^= CASTLE_KEYS[c as usize];
-    key
+pub fn update_castle(c: u8, key: &mut u64) {
+    *key ^= CASTLE_KEYS[c as usize];
 }
 
-pub fn update_side(side: Color, mut key: u64) -> u64 {
+pub fn update_side(side: Color, key: &mut u64) {
     if side == Color::White {
-        key ^= *BLACK_TO_MOVE;
+        *key ^= *BLACK_TO_MOVE;
     }
-    key
 }

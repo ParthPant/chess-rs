@@ -67,15 +67,15 @@ impl BoardConfig {
 
     fn set_ep_target(&mut self, t: Square) {
         if let Some(t) = self.en_passant_target {
-            self.hash = update_ep(t, self.hash)
+            update_ep(t, &mut self.hash)
         }
         self.en_passant_target = Some(t);
-        self.hash = update_ep(t, self.hash)
+        update_ep(t, &mut self.hash)
     }
 
     fn clear_ep_target(&mut self) {
         if let Some(t) = self.en_passant_target {
-            self.hash = update_ep(t, self.hash)
+            update_ep(t, &mut self.hash)
         }
         self.en_passant_target = None;
     }
@@ -181,8 +181,8 @@ impl BoardConfig {
             self.fullmove_number += 1;
         }
 
-        self.hash = update_castle(prev_castle_flags.raw(), self.hash);
-        self.hash = update_castle(self.castle_flags.raw(), self.hash);
+        update_castle(prev_castle_flags.raw(), &mut self.hash);
+        update_castle(self.castle_flags.raw(), &mut self.hash);
 
         self.halfmove_clock += 1;
         self.toggle_active_color();
@@ -300,8 +300,8 @@ impl BoardConfig {
             self.clear_ep_target();
         }
         let oldcastleflags = self.castle_flags.0 ^ commit.castledelta.0;
-        self.hash = update_castle(self.castle_flags.raw(), self.hash);
-        self.hash = update_castle(oldcastleflags, self.hash);
+        update_castle(self.castle_flags.raw(), &mut self.hash);
+        update_castle(oldcastleflags, &mut self.hash);
         self.castle_flags = CastleFlags(oldcastleflags);
         self.halfmove_clock -= 1;
         self.toggle_active_color();
@@ -475,18 +475,18 @@ impl BoardConfig {
 
     fn remove_piece(&mut self, p: BoardPiece, from: Square) {
         self.remove_from_bitboard(p, from);
-        self.hash = update_piece(from, p, self.hash);
+        update_piece(from, p, &mut self.hash);
     }
 
     fn add_piece(&mut self, p: BoardPiece, to: Square) {
         self.add_to_bitboard(p, to);
-        self.hash = update_piece(to, p, self.hash);
+        update_piece(to, p, &mut self.hash);
     }
 
     fn toggle_active_color(&mut self) {
-        self.hash = update_side(self.active_color, self.hash);
+        update_side(self.active_color, &mut self.hash);
         self.active_color = !self.active_color;
-        self.hash = update_side(self.active_color, self.hash);
+        update_side(self.active_color, &mut self.hash);
     }
 
     fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {

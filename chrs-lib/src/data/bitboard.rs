@@ -1,10 +1,24 @@
 use super::square::Square;
 use std::cmp::PartialEq;
 use std::fmt::Display;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Deref, DerefMut, Not, Shl, Shr};
 
 #[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Eq, PartialEq)]
 pub struct BitBoard(u64);
+
+impl Deref for BitBoard {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for BitBoard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl BitBoard {
     pub fn set(&mut self, sq: Square) {
@@ -24,10 +38,6 @@ impl BitBoard {
         self.set(new);
     }
 
-    pub fn data(&self) -> u64 {
-        self.0
-    }
-
     pub fn pop_sq(&mut self) -> Option<Square> {
         let tzs = self.0.trailing_zeros();
         if tzs >= 64 {
@@ -37,6 +47,10 @@ impl BitBoard {
             self.unset(sq);
             Some(sq)
         }
+    }
+
+    pub fn non_zero(&self) -> bool {
+        self.0 > 0
     }
 
     pub fn peek(&self) -> Option<Square> {
