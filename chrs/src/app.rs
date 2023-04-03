@@ -103,7 +103,7 @@ impl App {
             (pixels, framework)
         };
 
-        let mut moves = MoveList::new();
+        let mut moves: Option<MoveList> = None;
         let mut picked_sq: Option<Square> = None;
         event_loop.run(move |event, _, control_flow| {
             control_flow.set_poll();
@@ -162,7 +162,7 @@ impl App {
                             }
                         } else {
                             if let Some(user_move) = board.get_user_move() {
-                                if moves.has_target_sq(user_move.to) {
+                                if moves.as_ref().unwrap().has_target_sq(user_move.to) {
                                     if !user_move.is_empty_prom() {
                                         config.apply_move(user_move);
                                         board.clear_user_move();
@@ -174,7 +174,8 @@ impl App {
                                 picked_sq = sq;
                                 if let Some(sq) = sq {
                                     let p = config.get_at_sq(sq).unwrap();
-                                    moves = generator.gen_piece_moves(p, sq, &mut config, false);
+                                    moves =
+                                        Some(generator.gen_piece_moves(p, sq, &mut config, false));
                                 }
                             }
                         }

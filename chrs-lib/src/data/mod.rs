@@ -123,11 +123,8 @@ impl BoardConfig {
     }
 
     pub fn make_move(&mut self, m: Move) -> Option<MoveCommit> {
-        let p = m.p;
-        let pcolor = p.get_color();
-
         // prevent from moving when its not their turn
-        if pcolor != self.active_color {
+        if m.p.get_color() != self.active_color {
             return None;
         }
 
@@ -157,21 +154,18 @@ impl BoardConfig {
         // castling state update
         if m.from == Square::A1 || m.to == Square::A1 {
             self.castle_flags.unset_white_ooo();
-        }
-        if m.from == Square::A8 || m.to == Square::A8 {
+        } else if m.from == Square::A8 || m.to == Square::A8 {
             self.castle_flags.unset_black_ooo();
-        }
-        if m.from == Square::H1 || m.to == Square::H1 {
+        } else if m.from == Square::H1 || m.to == Square::H1 {
             self.castle_flags.unset_white_oo();
-        }
-        if m.from == Square::H8 || m.to == Square::H8 {
+        } else if m.from == Square::H8 || m.to == Square::H8 {
             self.castle_flags.unset_black_oo();
         }
+
         if m.from == Square::E1 || m.to == Square::E1 {
             self.castle_flags.unset_white_oo();
             self.castle_flags.unset_white_ooo();
-        }
-        if m.from == Square::E8 || m.to == Square::E8 {
+        } else if m.from == Square::E8 || m.to == Square::E8 {
             self.castle_flags.unset_black_oo();
             self.castle_flags.unset_black_ooo();
         }
@@ -199,9 +193,11 @@ impl BoardConfig {
     fn make_double_push(&mut self, m: &Move) {
         self.move_piece(m.p, m.from, m.to);
         if m.p.get_color() == Color::White {
-            self.set_ep_target(Square::try_from(m.to as usize - 8).unwrap());
+            // self.set_ep_target(Square::try_from(m.to as usize - 8).unwrap());
+            self.set_ep_target(unsafe { std::mem::transmute::<u8, Square>(m.to as u8 - 8) });
         } else {
-            self.set_ep_target(Square::try_from(m.to as usize + 8).unwrap());
+            // self.set_ep_target(Square::try_from(m.to as usize + 8).unwrap());
+            self.set_ep_target(unsafe { std::mem::transmute::<u8, Square>(m.to as u8 + 8) });
         }
     }
 
@@ -210,12 +206,12 @@ impl BoardConfig {
         if m.p.get_color() == Color::White {
             self.remove_piece(
                 m.capture.unwrap(),
-                Square::try_from(m.to as usize - 8).unwrap(),
+                unsafe { std::mem::transmute::<u8, Square>(m.to as u8 - 8) }, // Square::try_from(m.to as usize - 8).unwrap(),
             )
         } else {
             self.remove_piece(
                 m.capture.unwrap(),
-                Square::try_from(m.to as usize + 8).unwrap(),
+                unsafe { std::mem::transmute::<u8, Square>(m.to as u8 + 8) }, // Square::try_from(m.to as usize + 8).unwrap(),
             )
         }
     }
@@ -490,11 +486,11 @@ impl BoardConfig {
     }
 
     fn remove_from_bitboard(&mut self, p: BoardPiece, pos: Square) {
-        self.bitboards[p as usize].unset(pos);
+        *self.bitboards[p as usize] &= !(1 << pos as usize);
     }
 
     fn add_to_bitboard(&mut self, p: BoardPiece, pos: Square) {
-        self.bitboards[p as usize].set(pos);
+        *self.bitboards[p as usize] |= 1 << pos as usize;
     }
 }
 

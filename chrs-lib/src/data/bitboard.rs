@@ -43,8 +43,11 @@ impl BitBoard {
         if tzs >= 64 {
             None
         } else {
-            let sq: Square = (tzs as usize).try_into().unwrap();
-            self.unset(sq);
+            // let sq: Square = (tzs as usize).try_into().unwrap();
+            // this should be faster than try_into().unwrap()
+            let sq: Square = unsafe { std::mem::transmute(tzs as u8) };
+            // self.unset(sq);
+            self.0 &= !(1 << tzs);
             Some(sq)
         }
     }
@@ -58,7 +61,9 @@ impl BitBoard {
         if tzs >= 64 {
             None
         } else {
-            let sq: Square = (tzs as usize).try_into().unwrap();
+            // let sq: Square = (tzs as usize).try_into().unwrap();
+            // this should be faster than try_into().unwrap()
+            let sq: Square = unsafe { std::mem::transmute(tzs as u8) };
             Some(sq)
         }
     }

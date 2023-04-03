@@ -150,7 +150,7 @@ impl Board {
         frame: &mut [u8],
         gen: &MoveGenerator,
         config: &BoardConfig,
-        moves: &MoveList,
+        moves: &Option<MoveList>,
     ) {
         let size = self.get_draw_area_side();
         let mut pixmap = tiny_skia::Pixmap::new(size, size).unwrap();
@@ -263,7 +263,12 @@ impl Board {
                 );
                 pixmap.fill_rect(rect, paint, t, None);
                 if let Some(_) = self.picked_piece {
-                    if moves.has_target_sq((x, y).try_into().unwrap()) {
+                    if moves.is_some()
+                        && moves
+                            .as_ref()
+                            .unwrap()
+                            .has_target_sq((x, y).try_into().unwrap())
+                    {
                         pixmap.fill_rect(rect, &highlight_paint, t, None);
                     }
                 }

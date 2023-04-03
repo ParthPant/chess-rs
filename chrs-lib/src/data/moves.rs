@@ -109,7 +109,7 @@ impl Move {
                 move_type = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
-                    capture = c.get_at_sq(Square::try_from(t as usize - 8).unwrap());
+                    capture = c.get_at_sq(unsafe { std::mem::transmute(t as u8 - 8) });
                     move_type = EnPassant;
                 }
             }
@@ -121,7 +121,7 @@ impl Move {
                 move_type = DoublePush;
             } else if let Some(t) = c.en_passant_target {
                 if to == t {
-                    capture = c.get_at_sq(Square::try_from(t as usize + 8).unwrap());
+                    capture = c.get_at_sq(unsafe { std::mem::transmute(t as u8 + 8) });
                     move_type = EnPassant;
                 }
             }
@@ -283,6 +283,10 @@ impl MoveList {
     }
 
     pub fn new() -> Self {
-        Self(Vec::with_capacity(10))
+        Self(Vec::with_capacity(256))
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
     }
 }
