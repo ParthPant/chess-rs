@@ -46,7 +46,8 @@ fn main() {
     let fen = std::env::args().nth(2).expect("Fen not provided");
     let moves = std::env::args().nth(3).unwrap_or_default();
 
-    let mut config = BoardConfig::from_fen_str(&fen);
+    let mut config = BoardConfig::from_fen_str(&fen)
+        .expect("Invalid FEN");
     let gen = MoveGenerator::default();
 
     if moves != "" {
