@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 
 use crate::data::{BoardMap, CastleFlags, GameState};
@@ -9,8 +10,31 @@ use super::BoardConfig;
 
 pub struct Fen;
 
+#[derive(Debug, Clone)]
+pub enum FenError {
+    InvalidColor(char),
+    InvalidCastleFlag(char),
+    InvalidEnPassantTarget(String),
+    InvalidHalfMove(String),
+    InvalidFullMove(String),
+    ExtraFields,
+}
+
+impl fmt::Display for FenError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FenError::InvalidColor(c) => write!(f, "Invalid color: {}", c),
+            FenError::InvalidCastleFlag(c) => write!(f, "Invalid castle flag: {}", c),
+            FenError::InvalidEnPassantTarget(s) => write!(f, "Invalid en passant target: {}", s),
+            FenError::InvalidHalfMove(s) => write!(f, "Invalid halfmove: {}", s),
+            FenError::InvalidFullMove(s) => write!(f, "Invalid fullmove: {}", s),
+            FenError::ExtraFields => write!(f, "Extra fields in FEN"),
+        }
+    }
+}
+
 impl Fen {
-    pub fn make_config_from_str(s: &str) -> BoardConfig {
+    pub fn make_config_from_str(s: &str) -> Result<BoardConfig, FenError> {
         Fen::make_config(s)
     }
 
@@ -96,7 +120,7 @@ impl Fen {
     }
 
     // TODO: Return Result with custom error type
-    fn make_config(fen_str: &str) -> BoardConfig {
+    fn make_config(fen_str: &str) -> Result<BoardConfig, FenError> {
         log::trace!("Making BoardConfig...");
         let mut castle_flags = CastleFlags::default();
         let mut en_passant_target: Option<Square> = None;
@@ -136,8 +160,7 @@ impl Fen {
                                     active_color = Color::Black;
                                 }
                                 _ => {
-                                    log::error!("Fen Error: {} is invalid color", c);
-                                    panic!();
+                                    Err(FenError::InvalidColor(c))?;
                                 }
                             }
                         }
@@ -153,10 +176,7 @@ impl Fen {
                                 'q' => castle_flags.set_black_ooo(),
                                 'K' => castle_flags.set_white_oo(),
                                 'Q' => castle_flags.set_white_ooo(),
-                                _ => {
-                                    log::error!("Fen Error: {} is invalid", c);
-                                    panic!();
-                                }
+                                _ => Err(FenError::InvalidCastleFlag(c))?,
                             }
                         }
                     }
@@ -171,21 +191,18 @@ impl Fen {
                     if let Ok(n) = data.parse::<u8>() {
                         halfmove_clock = n;
                     } else {
-                        log::error!("Fen Error: {} is invalid halfmove", data);
-                        panic!();
+                        Err(FenError::InvalidHalfMove(data.to_string()))?
                     }
                 }
                 5 => {
                     if let Ok(n) = data.parse::<u8>() {
                         fullmove_number = n;
                     } else {
-                        log::error!("Fen Error: {} is invalid fullmove", data);
-                        panic!();
+                        Err(FenError::InvalidFullMove(data.to_string()))?
                     }
                 }
                 _ => {
-                    log::error!("Fen Error: Extra Fields");
-                    panic!();
+                    Err(FenError::ExtraFields)?
                 }
             };
         }
@@ -203,6 +220,6 @@ impl Fen {
             hash: 0,
         };
         c.hash = hash(&c);
-        c
+        Ok(c)
     }
 }

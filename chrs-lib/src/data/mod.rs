@@ -6,7 +6,7 @@ mod square;
 
 use crate::zobrist::{hash, update_castle, update_ep, update_side};
 use crate::{generator::MoveGenerator, zobrist::update_piece};
-use fen::Fen;
+use fen::{Fen, FenError};
 use moves::CastleType;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
@@ -41,6 +41,7 @@ pub struct BoardConfig {
 impl Default for BoardConfig {
     fn default() -> Self {
         Fen::make_config_from_str("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+            .expect("default board config is invalid")
     }
 }
 
@@ -364,12 +365,13 @@ impl BoardConfig {
         *self = BoardConfig::default();
     }
 
-    pub fn from_fen_str(s: &str) -> Self {
+    pub fn from_fen_str(s: &str) -> Result<BoardConfig, FenError> {
         Fen::make_config_from_str(s)
     }
 
-    pub fn load_fen(&mut self, s: &str) {
-        *self = Fen::make_config_from_str(s);
+    pub fn load_fen(&mut self, s: &str) -> Result<(), FenError> {
+        *self = Fen::make_config_from_str(s)?;
+        Ok(())
     }
 
     pub fn get_fen(&self) -> String {
