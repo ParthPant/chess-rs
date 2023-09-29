@@ -300,7 +300,6 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "rand",
- "rand_chacha",
  "strum",
  "strum_macros",
 ]

@@ -11,7 +11,6 @@ lazy_static = "1.4.0"
 rand = "0.8.5"
 strum = "0.24"
 strum_macros = "0.24"
-rand_chacha = "0.3.1"
 instant = "0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
