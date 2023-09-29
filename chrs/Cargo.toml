@@ -7,18 +7,16 @@ edition = "2021"
 chrs-lib = {path = "../chrs-lib"}
 
 log = "0.4.17"
-winit = "0.27.5"
-pixels = "0.12.0"
+winit = "0.28.7"
+pixels = "0.13.0"
 resvg = "0.29.0"
 fontdue = "0.7.2"
 
 [dependencies.egui]
-git = "https://github.com/emilk/egui.git"
-rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+version = "0.22.0"
 
 [dependencies.egui-wgpu]
-git = "https://github.com/emilk/egui.git"
-rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+version = "0.22.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1"
@@ -29,8 +27,7 @@ web-sys = {version = "0.3", features = ["GpuTextureFormat"]}
 rust-embed = {version = "6.6.1", features = ["debug-embed"]}
 
 [dependencies.egui-winit]
-git = "https://github.com/emilk/egui.git"
-rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+version = "0.22.0"
 default-features = false
 features = ["links"]
 
@@ -40,5 +37,4 @@ pretty_env_logger = "0.4.0"
 rust-embed = "6.6.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.egui-winit]
-git = "https://github.com/emilk/egui.git"
-rev = "f222ee044edf8beebfaf5dd7be15c9f318f20886"
+version = "0.22.0"

@@ -14,6 +14,7 @@ use std::rc::Rc;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::Window;
 
+
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct GuiFramework {
     // State for egui.
