@@ -366,7 +366,11 @@ impl Board {
     }
 
     fn get_glyph_path(p: &BoardPiece) -> String {
-        let s = format!("{}.svg", p);
+        let color = match p.get_color() {
+            Color::White => "w",
+            Color::Black => "b",
+        };
+        let s = format!("{}{}.svg",color, p).to_lowercase();
         s.to_owned()
     }
 
